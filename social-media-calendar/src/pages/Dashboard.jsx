@@ -74,7 +74,7 @@ function Dashboard() {
 
   const fetchClients = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/clients");
+      const res = await fetch("http://20.40.44.179:5000/api/clients");
       const data = await res.json();
       setClients(data);
     } catch (err) {
@@ -185,7 +185,7 @@ function Dashboard() {
   // }
 
   async function loadAllPosts() {
-    const res = await fetch("http://localhost:5000/api/posts/all");
+    const res = await fetch("http://20.40.44.179:5000/api/posts/all");
     const data = await res.json();
 
     if (data.success) {
@@ -207,13 +207,13 @@ function Dashboard() {
 
 
   async function loadQueued() {
-    const res = await fetch("http://localhost:5000/api/queued-posts");
+    const res = await fetch("http://20.40.44.179:5000/api/queued-posts");
     const data = await res.json();
     setQueuedPosts(data);
   }
 
   async function loadPublished() {
-    const res = await fetch("http://localhost:5000/api/published-posts");
+    const res = await fetch("http://20.40.44.179:5000/api/published-posts");
     const data = await res.json();
     setPublishedPosts(data);
   }
@@ -262,7 +262,7 @@ function Dashboard() {
     if (!newClient.trim()) return alert("Please enter a client name");
 
     try {
-      const response = await fetch("http://localhost:5000/api/clients", {
+      const response = await fetch("http://20.40.44.179:5000/api/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newClient, email: "" }) // optional email field
@@ -348,7 +348,7 @@ function Dashboard() {
         formData.append("platforms", JSON.stringify(newPost.platforms));
         formData.append("file", newPost.file);   // ⬅ REAL FILE
 
-        const response = await fetch("http://localhost:5000/api/posts", {
+        const response = await fetch("http://20.40.44.179:5000/api/posts", {
           method: "POST",
           body: formData
         });
@@ -377,7 +377,7 @@ function Dashboard() {
         console.log("✅ Post saved:", result);
 
         // 2️⃣ Fetch updated posts from database
-        const postsRes = await fetch("http://localhost:5000/api/posts/all");
+        const postsRes = await fetch("http://20.40.44.179:5000/api/posts/all");
         const updatedPosts = await postsRes.json();
 
         if (Array.isArray(updatedPosts)) {
@@ -436,7 +436,7 @@ function Dashboard() {
             const imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROdPJYVL1V2HvDgFjqF5xm0l5WuZCnS5QrSw&s";
 
             // 2️⃣ Send post request to backend
-            const instagramResponse = await fetch(`http://localhost:5000/api/clients/${selectedClient.id}/instagram/post`, {
+            const instagramResponse = await fetch(`http://20.40.44.179:5000/api/clients/${selectedClient.id}/instagram/post`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -468,7 +468,7 @@ function Dashboard() {
             console.log("🔵 Checking LinkedIn connection for client:", selectedClient.id);
 
             const lnRes = await fetch(
-              `http://localhost:5000/api/clients/${selectedClient.id}/linkedin/account`
+              `http://20.40.44.179:5000/api/clients/${selectedClient.id}/linkedin/account`
             );
 
             if (lnRes.status === 404) throw new Error("LinkedIn not connected");
@@ -495,7 +495,7 @@ function Dashboard() {
 
             // 1️⃣ Get Twitter OAuth credentials from database
             const twRes = await fetch(
-              `http://localhost:5000/api/clients/${selectedClient.id}/twitter/account`
+              `http://20.40.44.179:5000/api/clients/${selectedClient.id}/twitter/account`
             );
 
             if (!twRes.ok) throw new Error("Twitter not connected for this client");
@@ -542,7 +542,7 @@ function Dashboard() {
     try {
       console.log("🗑️ Deleting post:", postId);
 
-      const response = await fetch(`http://localhost:5000/api/deletePosts/${postId}`, {
+      const response = await fetch(`http://20.40.44.179:5000/api/deletePosts/${postId}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json"
@@ -613,7 +613,7 @@ function Dashboard() {
 
     try {
       console.log("🗑️ Deleting client:", clientId);
-      const url = `http://localhost:5000/api/deleteClient/${clientId}`;
+      const url = `http://20.40.44.179:5000/api/deleteClient/${clientId}`;
       console.log("📍 URL:", url);
 
       const response = await fetch(url, {

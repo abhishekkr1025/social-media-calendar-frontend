@@ -41,7 +41,7 @@ export default function ConnectToPlatforms() {
     }, []);
 
     const fetchClients = async () => {
-        const res = await fetch("http://localhost:5000/api/clients");
+        const res = await fetch("http://20.40.44.179:5000/api/clients");
         setClients(await res.json());
     };
 
@@ -51,7 +51,7 @@ const loadPlatformStatus = async (clientId) => {
 
         for (let p of platforms) {
             try {
-                const res = await fetch(`http://localhost:5000/api/clients/${clientId}/${p.id}/account`);
+                const res = await fetch(`http://20.40.44.179:5000/api/clients/${clientId}/${p.id}/account`);
                 const data = await res.json();
                 // Connected if response is OK AND data array is not empty
                 newStatus[p.id] = res.ok && data && data.length !== 0;
@@ -76,12 +76,12 @@ const loadPlatformStatus = async (clientId) => {
             setShowWPModal(true);
             return;
         }
-        window.location.href = `http://localhost:5000/auth/${platform}/login/${selectedClientId}`;
+        window.location.href = `http://20.40.44.179:5000/auth/${platform}/login/${selectedClientId}`;
     };
 
     const disconnectPlatform = async (platform) => {
         const res = await fetch(
-            `http://localhost:5000/api/clients/${selectedClientId}/${platform}/disconnect`,
+            `http://20.40.44.179:5000/api/clients/${selectedClientId}/${platform}/disconnect`,
             { method: "DELETE" }
         );
         if (res.ok) {
@@ -94,7 +94,7 @@ const loadPlatformStatus = async (clientId) => {
         if (!wpData.site_url || !wpData.username || !wpData.app_password)
             return alert("All fields are required.");
 
-        const res = await fetch("http://localhost:5000/auth/wordpress/login", {
+        const res = await fetch("http://20.40.44.179:5000/auth/wordpress/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ clientId: selectedClientId, ...wpData }),
