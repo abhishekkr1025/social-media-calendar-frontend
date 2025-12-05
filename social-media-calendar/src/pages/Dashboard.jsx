@@ -32,55 +32,31 @@ function Dashboard() {
     platforms: []
   })
 
-  // ✅ Load from localStorage once when app starts
-  // useEffect(() => {
-  //   try {
-  //     const savedClients = JSON.parse(localStorage.getItem('smm-clients')) || [];
-  //     const savedPosts = JSON.parse(localStorage.getItem('smm-posts')) || [];
-  //     setClients(savedClients);
-  //     setPosts(savedPosts);
-  //   } catch (error) {
-  //     console.error("Error loading from localStorage:", error);
-  //   }
-  // }, []);
-
-  // Save data to localStorage whenever it changes
-  // useEffect(() => {
-  //   localStorage.setItem('smm-clients', JSON.stringify(clients))
-  // }, [clients])
-
-  // useEffect(() => {
-  //   localStorage.setItem('smm-posts', JSON.stringify(posts))
-  // }, [posts])
-
-
-  //   useEffect(() => {
-  //   try {
-  //     const storedClients = JSON.parse(localStorage.getItem('clients')) || [];
-  //     const storedPosts = JSON.parse(localStorage.getItem('posts')) || [];
-  //     setClients(storedClients);
-  //     setPosts(storedPosts);
-  //   } catch (e) {
-  //     console.error('Failed to load localStorage data:', e);
-  //   }
-  // }, []);
-
+  const BASE_URL = "https://prod.panditjee.com"
   // Store tokens securely (consider using environment variables or secure storage)
-  let instagramToken = "EAAHaB1oOYrwBP2WZC6XBC5sYtY80JCruOhvFHjIoZBPlLPOEMoaewIj2TVsXEi3jGCp8YAkzLkIMkWuMDBFCe7Ob62WKOjof8UGoQM6HwuR98lnU5Lqer3rQVxe7jZCXZCyrbVGZBuGrwQudV63ZAlp8BlgEJ9HiYyL4SGehRrwSgNIk1tLRbqZCpkUXy33Chqyx1NZBvWd696jZCH3AOvUQxvDrbMG6ZBYXIpGkrtHvko67PfZAVjBNGQPpld8ZB1GMYDFtCT5LTrzAaichtomvOw2f8ruj";
-  let tokenExpiry = null;
+  // let instagramToken = "";
+  // let tokenExpiry = null;
 
   // Run this in your browser console or add a button for it
   // initializeInstagramToken("EAAHaB1oOYrwBPZCFLgu0hWJeKKPklSfdRzK0JJXMV6R7gZAYQZAFEx60Siv23s03lYB7j3AIOHEIxDSGH5KvJfPMS2YtQ5BNsZAgKaRYPWv2ZAphlxXDkheyDXw2ZCD13ZCf6IqURSxdE0trXkFAgiXMPrzAd1W8hWGTDqoT44047SuZA40JdiNBgyBo3POXN1Etqs8lxB4trE0IujLTbtF2G0WQIhDEw920tSHeb0bVCCZBpBMb55UJ2eqwW6ebWtuhqpNnX5elWeBVho8BcqbhlJM2H");
 
   const fetchClients = async () => {
     try {
-      const res = await fetch("http://20.40.44.179:5000/api/clients");
+      const res = await fetch(`${BASE_URL}/api/clients`);
       const data = await res.json();
       setClients(data);
     } catch (err) {
       console.error("Failed to fetch clients:", err);
     }
   };
+
+  useEffect(() => {
+    loadQueued();
+    loadPublished();
+    fetchClients();
+    loadAllPosts();
+  }, [selectedClient]);
+
 
   // const fetchPosts = async () => {
 
@@ -160,19 +136,18 @@ function Dashboard() {
   //     .then(setPosts);
   // }, []);
 
-  // Load all data
-  useEffect(() => {
-    fetchClients();
-    loadAllPosts();
+  // // Load all data
+  // useEffect(() => {
 
-    // Auto-refresh queued & published posts every 10 seconds
-    const interval = setInterval(() => {
-      loadQueued();
-      loadPublished();
-    }, 10000);
 
-    return () => clearInterval(interval);
-  }, []);
+  //   Auto-refresh queued & published posts every 10 seconds
+  //   const interval = setInterval(() => {
+  //     loadQueued();
+  //     loadPublished();
+  //   }, 10000);
+
+  //   return () => clearInterval(interval);
+  // }, []);
 
   // async function loadClients() {
   //    try {
@@ -185,7 +160,7 @@ function Dashboard() {
   // }
 
   async function loadAllPosts() {
-    const res = await fetch("http://20.40.44.179:5000/api/posts/all");
+    const res = await fetch(`${BASE_URL}/api/posts/all`);
     const data = await res.json();
 
     if (data.success) {
@@ -206,17 +181,27 @@ function Dashboard() {
 
 
 
-  async function loadQueued() {
-    const res = await fetch("http://20.40.44.179:5000/api/queued-posts");
-    const data = await res.json();
-    setQueuedPosts(data);
-  }
+async function loadQueued() {
+  const url = selectedClient && selectedClient.id
+    ? `${BASE_URL}/api/queued/${selectedClient.id}`
+    : `${BASE_URL}/api/queued-posts`;
 
-  async function loadPublished() {
-    const res = await fetch("http://20.40.44.179:5000/api/published-posts");
-    const data = await res.json();
-    setPublishedPosts(data);
-  }
+  const res = await fetch(url);
+  const data = await res.json();
+  setQueuedPosts(data);
+}
+
+
+async function loadPublished() {
+  const url = selectedClient && selectedClient.id
+    ? `${BASE_URL}/api/published-posts/${selectedClient.id}`
+    : `${BASE_URL}/api/published-posts`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+  setPublishedPosts(data);
+}
+
 
 
 
@@ -237,7 +222,7 @@ function Dashboard() {
     twitter: <Twitter className="w-4 h-4" />,
     linkedin: <Linkedin className="w-4 h-4" />,
     youtube: <Youtube className="w-4 h-4" />,
-    wordpress: <SiWordpress className='w-4 h-4'/>
+    wordpress: <SiWordpress className='w-4 h-4' />
   }
 
   const platformColors = {
@@ -247,7 +232,7 @@ function Dashboard() {
     linkedin: 'bg-blue-700',
     youtube: 'bg-red-500',
     wordpress: 'bg-blue-500'
-    
+
   }
 
   // const addClient = () => {
@@ -262,7 +247,7 @@ function Dashboard() {
     if (!newClient.trim()) return alert("Please enter a client name");
 
     try {
-      const response = await fetch("http://20.40.44.179:5000/api/clients", {
+      const response = await fetch(`${BASE_URL}/api/clients`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newClient, email: "" }) // optional email field
@@ -335,7 +320,7 @@ function Dashboard() {
 
     if (isTrue) {
       try {
-        const imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROdPJYVL1V2HvDgFjqF5xm0l5WuZCnS5QrSw&s";
+        // const imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROdPJYVL1V2HvDgFjqF5xm0l5WuZCnS5QrSw&s";
 
         const scheduled_at = `${newPost.date} ${newPost.time}:00`;
 
@@ -348,7 +333,7 @@ function Dashboard() {
         formData.append("platforms", JSON.stringify(newPost.platforms));
         formData.append("file", newPost.file);   // ⬅ REAL FILE
 
-        const response = await fetch("http://20.40.44.179:5000/api/posts", {
+        const response = await fetch(`${BASE_URL}/api/posts`, {
           method: "POST",
           body: formData
         });
@@ -377,7 +362,7 @@ function Dashboard() {
         console.log("✅ Post saved:", result);
 
         // 2️⃣ Fetch updated posts from database
-        const postsRes = await fetch("http://20.40.44.179:5000/api/posts/all");
+        const postsRes = await fetch(`${BASE_URL}/api/posts/all`);
         const updatedPosts = await postsRes.json();
 
         if (Array.isArray(updatedPosts)) {
@@ -389,62 +374,25 @@ function Dashboard() {
         setNewPost({ content: '', date: '', time: '', platforms: [] });
         setShowAddPost(false);
 
-        // // 4️⃣ Try posting to Instagram if selected
-        // if (newPost.platforms.includes('instagram')) {
-        //   try {
-
-        //     // Get valid token (will refresh if expired)
-        //     const validToken = await getValidInstagramToken();
-        //     const accountId = "17841407225233726";
-        //     const caption = newPost.content;
-        //     const scheduledTime = `${newPost.date}T${newPost.time}`;
-
-        //     const instagramResponse = await fetch("http://localhost:5000/api/instagram/post", {
-        //       method: "POST",
-        //       headers: { "Content-Type": "application/json" },
-        //       body: JSON.stringify({
-        //         accountId: accountId,
-        //         imageUrl: imageUrl,
-        //         caption: caption,
-        //         token: "EAAHaB1oOYrwBP72ZAeEtrn3CsZA8gRVHOZBdZCVbGZCkyTZBf8s82qzswkWBPoVZA2Ku1kBlXkHJJgexhhMSDndqfc37XwkjnXiE9souC9LxfldXQE4mxm0ZALPsVyiFxvig3qyuXioaOTZA7IlSmYmRrFyusY15YZBXoovXpKAZA4EnaSzQzxsEcWgSsBIrykT0U6H"
-        //       })
-        //     });
-
-        //     const instagramResult = await instagramResponse.json();
-        //     console.log("✅ Instagram post successful:", instagramResult);
-        //   } catch (error) {
-        //     console.error("❌ Failed to post to Instagram:", error);
-        //     alert("Post saved but failed to publish on Instagram. Check console for details.");
-        //   }
-        // }
-
 
         // 🟣 4️⃣ Try posting to Instagram if selected
         if (newPost.platforms.includes('instagram')) {
           try {
             console.log("📸 Posting to Instagram for client:", selectedClient.id);
 
-            // 1️⃣ Fetch client's connected Instagram account
-            // const accountRes = await fetch(`http://localhost:5000/api/clients/${selectedClient.id}/instagram/account`);
-            // if (!accountRes.ok) {
-            //   throw new Error("No connected Instagram account for this client");
-            // }
-            // const accountData = await accountRes.json();
-
-            // const { instagram_account_id, token_expires_at } = accountData;
             const caption = newPost.content;
             const imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROdPJYVL1V2HvDgFjqF5xm0l5WuZCnS5QrSw&s";
 
-            // 2️⃣ Send post request to backend
-            const instagramResponse = await fetch(`http://20.40.44.179:5000/api/clients/${selectedClient.id}/instagram/post`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                caption,
-                image_url: imageUrl,
-                long_lived_token: "EAAHaB1oOYrwBP72ZAeEtrn3CsZA8gRVHOZBdZCVbGZCkyTZBf8s82qzswkWBPoVZA2Ku1kBlXkHJJgexhhMSDndqfc37XwkjnXiE9souC9LxfldXQE4mxm0ZALPsVyiFxvig3qyuXioaOTZA7IlSmYmRrFyusY15YZBXoovXpKAZA4EnaSzQzxsEcWgSsBIrykT0U6H", // only needed once
-              }),
-            });
+            // // 2️⃣ Send post request to backend
+            // const instagramResponse = await fetch(`${BASE_URL}/api/clients/${selectedClient.id}/instagram/post`, {
+            //   method: "POST",
+            //   headers: { "Content-Type": "application/json" },
+            //   body: JSON.stringify({
+            //     caption,
+            //     image_url: imageUrl,
+            //     long_lived_token: "EAAHaB1oOYrwBP72ZAeEtrn3CsZA8gRVHOZBdZCVbGZCkyTZBf8s82qzswkWBPoVZA2Ku1kBlXkHJJgexhhMSDndqfc37XwkjnXiE9souC9LxfldXQE4mxm0ZALPsVyiFxvig3qyuXioaOTZA7IlSmYmRrFyusY15YZBXoovXpKAZA4EnaSzQzxsEcWgSsBIrykT0U6H", // only needed once
+            //   }),
+            // });
 
             const instagramResult = await instagramResponse.json();
 
@@ -468,7 +416,7 @@ function Dashboard() {
             console.log("🔵 Checking LinkedIn connection for client:", selectedClient.id);
 
             const lnRes = await fetch(
-              `http://20.40.44.179:5000/api/clients/${selectedClient.id}/linkedin/account`
+              `${BASE_URL}/api/clients/${selectedClient.id}/linkedin/account`
             );
 
             if (lnRes.status === 404) throw new Error("LinkedIn not connected");
@@ -495,7 +443,7 @@ function Dashboard() {
 
             // 1️⃣ Get Twitter OAuth credentials from database
             const twRes = await fetch(
-              `http://20.40.44.179:5000/api/clients/${selectedClient.id}/twitter/account`
+              `${BASE_URL}/api/clients/${selectedClient.id}/twitter/account`
             );
 
             if (!twRes.ok) throw new Error("Twitter not connected for this client");
@@ -542,7 +490,7 @@ function Dashboard() {
     try {
       console.log("🗑️ Deleting post:", postId);
 
-      const response = await fetch(`http://20.40.44.179:5000/api/deletePosts/${postId}`, {
+      const response = await fetch(`${BASE_URL}/api/deletePosts/${postId}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json"
@@ -570,40 +518,40 @@ function Dashboard() {
 
 
   // 1. First, connect Instagram account for client with ID 9
-  const connectInstagram = async () => {
-    const longLivedToken = 'EAAHaB1oOYrwBP72ZAeEtrn3CsZA8gRVHOZBdZCVbGZCkyTZBf8s82qzswkWBPoVZA2Ku1kBlXkHJJgexhhMSDndqfc37XwkjnXiE9souC9LxfldXQE4mxm0ZALPsVyiFxvig3qyuXioaOTZA7IlSmYmRrFyusY15YZBXoovXpKAZA4EnaSzQzxsEcWgSsBIrykT0U6H';
+  // const connectInstagram = async () => {
+  //   const longLivedToken = 'EAAHaB1oOYrwBP72ZAeEtrn3CsZA8gRVHOZBdZCVbGZCkyTZBf8s82qzswkWBPoVZA2Ku1kBlXkHJJgexhhMSDndqfc37XwkjnXiE9souC9LxfldXQE4mxm0ZALPsVyiFxvig3qyuXioaOTZA7IlSmYmRrFyusY15YZBXoovXpKAZA4EnaSzQzxsEcWgSsBIrykT0U6H';
 
-    const response = await fetch('/api/clients/9/instagram/connect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ long_lived_token: longLivedToken })
-    });
+  //   const response = await fetch('/api/clients/9/instagram/connect', {
+  //     method: 'POST',
+  //     headers: { 'Content-Type': 'application/json' },
+  //     body: JSON.stringify({ long_lived_token: longLivedToken })
+  //   });
 
-    const data = await response.json();
-    console.log('Connected:', data);
-  };
+  //   const data = await response.json();
+  //   console.log('Connected:', data);
+  // };
 
   // 2. Post to client's Instagram
-  const postToInstagram = async () => {
-    const response = await fetch('/api/clients/9/instagram/post', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        image_url: 'https://example.com/your-image.jpg',
-        caption: 'Check out this amazing post! #instagram #socialmedia'
-      })
-    });
+  // const postToInstagram = async () => {
+  //   const response = await fetch('/api/clients/9/instagram/post', {
+  //     method: 'POST',
+  //     headers: { 'Content-Type': 'application/json' },
+  //     body: JSON.stringify({
+  //       image_url: 'https://example.com/your-image.jpg',
+  //       caption: 'Check out this amazing post! #instagram #socialmedia'
+  //     })
+  //   });
 
-    const data = await response.json();
-    console.log('Posted:', data);
-  };
+  //   const data = await response.json();
+  //   console.log('Posted:', data);
+  // };
 
   // 3. Get client's Instagram posts
-  const getPosts = async () => {
-    const response = await fetch('/api/clients/9/instagram/posts?limit=10');
-    const data = await response.json();
-    console.log('Posts:', data);
-  };
+  // const getPosts = async () => {
+  //   const response = await fetch('/api/clients/9/instagram/posts?limit=10');
+  //   const data = await response.json();
+  //   console.log('Posts:', data);
+  // };
 
 
   const deleteClient = async (clientId) => {
@@ -613,7 +561,7 @@ function Dashboard() {
 
     try {
       console.log("🗑️ Deleting client:", clientId);
-      const url = `http://20.40.44.179:5000/api/deleteClient/${clientId}`;
+      const url = `${BASE_URL}/api/deleteClient/${clientId}`;
       console.log("📍 URL:", url);
 
       const response = await fetch(url, {

@@ -8,7 +8,7 @@ import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from
 // - Default export is the OnboardingApp component
 // - Assumes BACKEND_URL is set in env (REACT_APP_BACKEND_URL)
 
-const BACKEND_URL = 'http://20.40.44.179:5000';
+const BACKEND_URL = 'https://prod.panditjee.com';
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
