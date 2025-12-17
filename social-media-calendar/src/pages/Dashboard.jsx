@@ -9,6 +9,8 @@ import { Calendar, Plus, Download, Trash2, Facebook, Instagram, Twitter, Linkedi
 import '../App.css'
 import { useNavigate } from 'react-router-dom'
 import { SiWordpress } from 'react-icons/si'
+import MonthCalendar from '@/components/MonthCalendar'
+import { DndContext } from "@dnd-kit/core";
 
 
 
@@ -23,22 +25,25 @@ function Dashboard() {
   const [queuedPosts, setQueuedPosts] = useState([]);
   const [publishedPosts, setPublishedPosts] = useState([]);
   const navigate = useNavigate();
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
+  const [monthDirection, setMonthDirection] = useState("next"); // "next" | "prev"
+  const [rawPosts, setRawPosts] = useState([]);
+  const [isClosing, setIsClosing] = useState(false);
+
+
 
 
   const [newPost, setNewPost] = useState({
     content: '',
     date: '',
     time: '',
-    platforms: []
+    platforms: [],
+    file: null
   })
 
   const BASE_URL = "https://prod.panditjee.com"
-  // Store tokens securely (consider using environment variables or secure storage)
-  // let instagramToken = "";
-  // let tokenExpiry = null;
-
-  // Run this in your browser console or add a button for it
-  // initializeInstagramToken("EAAHaB1oOYrwBPZCFLgu0hWJeKKPklSfdRzK0JJXMV6R7gZAYQZAFEx60Siv23s03lYB7j3AIOHEIxDSGH5KvJfPMS2YtQ5BNsZAgKaRYPWv2ZAphlxXDkheyDXw2ZCD13ZCf6IqURSxdE0trXkFAgiXMPrzAd1W8hWGTDqoT44047SuZA40JdiNBgyBo3POXN1Etqs8lxB4trE0IujLTbtF2G0WQIhDEw920tSHeb0bVCCZBpBMb55UJ2eqwW6ebWtuhqpNnX5elWeBVho8BcqbhlJM2H");
 
   const fetchClients = async () => {
     try {
@@ -58,23 +63,25 @@ function Dashboard() {
   }, [selectedClient]);
 
 
-  // const fetchPosts = async () => {
+  useEffect(() => {
+    if (!clients.length || !rawPosts.length) return;
 
-  //   try {
+    const formatted = rawPosts.map(p => {
+      const dt = new Date(p.scheduled_at);
+      return {
+        ...p,
+        date: toLocalDateString(dt),
+        time: dt.toISOString().split("T")[1].slice(0, 5),
+        clientName:
+          clients.find(c => c.id === p.clientId)?.name || "Client"
+      };
+    });
 
-  //     const res = await fetch("http://localhost:5000/api/posts");
-  //     if (!res.ok) throw new Error("Failed to fetch posts");
+    setPosts(formatted);
+  }, [clients, rawPosts]);
 
-  //     const data = await res.json();
-  //     console.log("Fetched posts:", data);
 
-  //     setPosts(data);
 
-  //   } catch (err) {
-  //     console.error("Error fetching posts:", err);
-  //   }
-
-  // }
 
 
 
@@ -87,130 +94,57 @@ function Dashboard() {
     navigate("/connect-platform");
   }
 
-  // // Function to refresh Instagram token
-  // const refreshInstagramToken = async () => {
-  //   try {
-  //     const response = await fetch("http://localhost:5000/api/instagram/refresh-token", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({
-  //         token: instagramToken
-  //       })
-  //     });
+  const closeScheduler = () => {
+    setIsClosing(true);
 
-  //     if (!response.ok) {
-  //       throw new Error("Failed to refresh token");
-  //     }
-
-  //     const result = await response.json();
-  //     instagramToken = result.access_token;
-  //     tokenExpiry = Date.now() + (result.expires_in * 1000); // Convert to milliseconds
-
-  //     console.log("✅ Token refreshed successfully");
-  //     return instagramToken;
-  //   } catch (error) {
-  //     console.error("❌ Token refresh failed:", error);
-  //     throw error;
-  //   }
-  // };
-
-  // // Function to get valid token (refreshes if expired)
-  // const getValidInstagramToken = async () => {
-  //   // Check if token is expired or about to expire (within 5 minutes)
-  //   const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
-
-  //   if (!tokenExpiry || Date.now() >= (tokenExpiry - bufferTime)) {
-  //     console.log("🔄 Token expired or missing, refreshing...");
-  //     return await refreshInstagramToken();
-  //   }
-
-  //   return instagramToken;
-  // };
+    // wait for animation to finish
+    setTimeout(() => {
+      setIsSchedulerOpen(false);
+      setIsClosing(false);
+    }, 200); // must match animation duration
+  };
 
 
-
-  // Load posts from MySQL
-  // useEffect(() => {
-  //   fetch("http://localhost:5000/api/posts")
-  //     .then(res => res.json())
-  //     .then(setPosts);
-  // }, []);
-
-  // // Load all data
-  // useEffect(() => {
-
-
-  //   Auto-refresh queued & published posts every 10 seconds
-  //   const interval = setInterval(() => {
-  //     loadQueued();
-  //     loadPublished();
-  //   }, 10000);
-
-  //   return () => clearInterval(interval);
-  // }, []);
-
-  // async function loadClients() {
-  //    try {
-  //     const res = await fetch("http://localhost:5000/api/clients");
-  //     const data = await res.json();
-  //     setClients(data);
-  //   } catch (err) {
-  //     console.error("Failed to fetch clients:", err);
-  //   }
-  // }
 
   async function loadAllPosts() {
     const res = await fetch(`${BASE_URL}/api/posts/all`);
     const data = await res.json();
 
     if (data.success) {
-      const formatted = data.posts.map(p => {
-        const dt = new Date(p.scheduled_at);
-        return {
-          ...p,
-          date: dt.toISOString().split("T")[0],
-          time: dt.toISOString().split("T")[1].slice(0, 5),
-          clientName: clients.find(c => c.id === p.clientId)?.name || "Client",
-        };
-      });
-
-      setPosts(formatted);
+      setRawPosts(data.posts);
       setQueuedPosts(data.queued_posts || []);
     }
   }
 
 
 
-async function loadQueued() {
-  const url = selectedClient && selectedClient.id
-    ? `${BASE_URL}/api/queued/${selectedClient.id}`
-    : `${BASE_URL}/api/queued-posts`;
 
-  const res = await fetch(url);
-  const data = await res.json();
-  setQueuedPosts(data);
-}
+  async function loadQueued() {
+    const url = selectedClient && selectedClient.id
+      ? `${BASE_URL}/api/queued/${selectedClient.id}`
+      : `${BASE_URL}/api/queued-posts`;
 
-
-async function loadPublished() {
-  const url = selectedClient && selectedClient.id
-    ? `${BASE_URL}/api/published-posts/${selectedClient.id}`
-    : `${BASE_URL}/api/published-posts`;
-
-  const res = await fetch(url);
-  const data = await res.json();
-  setPublishedPosts(data);
-}
+    const res = await fetch(url);
+    const data = await res.json();
+    setQueuedPosts(data);
+  }
 
 
+  async function loadPublished() {
+    const url = selectedClient && selectedClient.id
+      ? `${BASE_URL}/api/published-posts/${selectedClient.id}`
+      : `${BASE_URL}/api/published-posts`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+    setPublishedPosts(data);
+  }
 
 
 
-  // async function loadClients() {
-  //   const res = await fetch("http://localhost:5000/api/clients");
-  //   const data = await res.json();
-  //   setClients(data.clients || []);
-  // }
+
+
+
 
 
 
@@ -235,13 +169,15 @@ async function loadPublished() {
 
   }
 
-  // const addClient = () => {
-  //   if (newClient.trim()) {
-  //     setClients([...clients, { id: Date.now(), name: newClient }])
-  //     setNewClient('')
-  //     setShowAddClient(false)
-  //   }
-  // }
+  function toLocalDateString(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+
+
 
   const addClient = async () => {
     if (!newClient.trim()) return alert("Please enter a client name");
@@ -271,42 +207,6 @@ async function loadPublished() {
 
 
 
-  // const deleteClient = (clientId) => {
-  //   setClients(clients.filter(c => c.id !== clientId))
-  //   setPosts(posts.filter(p => p.clientId !== clientId))
-  //   if (selectedClient?.id === clientId) {
-  //     setSelectedClient(null)
-  //   }
-  // }
-
-  // const addPost = () => {
-  //   if (selectedClient && newPost.content && newPost.date && newPost.time && newPost.platforms.length > 0) {
-  //     setPosts([...posts, {
-  //       id: Date.now(),
-  //       clientId: selectedClient.id,
-  //       clientName: selectedClient.name,
-  //       ...newPost
-  //     }])
-  //     setNewPost({ content: '', date: '', time: '', platforms: [] })
-  //     setShowAddPost(false)
-  //   }
-  // }
-
-
-  // // After callback, use token for API calls
-  // const postToLinkedIn = async (text, imageUrl) => {
-  //   const token = getStoredToken(); // Get from your storage
-  //   const profile = await fetch(`/api/linkedin/profile?token=${token}`);
-  //   const { personUrn } = await profile.json();
-
-  //   await fetch('/api/linkedin/post', {
-  //     method: 'POST',
-  //     headers: { 'Content-Type': 'application/json' },
-  //     body: JSON.stringify({ text, imageUrl, token, personUrn })
-  //   });
-  // };
-
-
 
   const addPost = async () => {
     console.log("function called");
@@ -316,13 +216,30 @@ async function loadPublished() {
       newPost.time &&
       newPost.platforms.length > 0;
 
+    console.log("VALIDATION DEBUG", {
+      selectedClient,
+      content: newPost.content,
+      date: newPost.date,
+      time: newPost.time,
+      platforms: newPost.platforms
+    });
+
+
     console.log("Validation:", isTrue);
 
     if (isTrue) {
       try {
         // const imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROdPJYVL1V2HvDgFjqF5xm0l5WuZCnS5QrSw&s";
 
+        if (!newPost.date || !newPost.time) {
+          alert("Please select a date and time");
+          return;
+        }
+
         const scheduled_at = `${newPost.date} ${newPost.time}:00`;
+
+
+
 
 
         const formData = new FormData();
@@ -331,32 +248,21 @@ async function loadPublished() {
         formData.append("caption", newPost.content);
         formData.append("scheduled_at", scheduled_at);
         formData.append("platforms", JSON.stringify(newPost.platforms));
-        formData.append("file", newPost.file);   // ⬅ REAL FILE
+        formData.append("file", newPost.file);
+
+        console.log("formdata: ", JSON.stringify(formData));
 
         const response = await fetch(`${BASE_URL}/api/posts`, {
           method: "POST",
           body: formData
         });
 
-
-
-        // // 1️⃣ Save to database
-        // const response = await fetch("http://localhost:5000/api/posts", {
-        //   method: "POST",
-        //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify({
-        //     clientId: selectedClient.id,
-        //     title: newPost.content,
-        //     caption: newPost.content,
-        //     imageUrl,
-        //     scheduled_at,
-        //     platforms: newPost.platforms,
-        //   }),
-        // });
-
         if (!response.ok) {
           throw new Error("Failed to save post");
         }
+
+        closeScheduler();
+
 
         const result = await response.json();
         console.log("✅ Post saved:", result);
@@ -376,101 +282,15 @@ async function loadPublished() {
 
 
         // 🟣 4️⃣ Try posting to Instagram if selected
-        if (newPost.platforms.includes('instagram')) {
-          try {
-            console.log("📸 Posting to Instagram for client:", selectedClient.id);
-
-            const caption = newPost.content;
-            const imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROdPJYVL1V2HvDgFjqF5xm0l5WuZCnS5QrSw&s";
-
-            // // 2️⃣ Send post request to backend
-            // const instagramResponse = await fetch(`${BASE_URL}/api/clients/${selectedClient.id}/instagram/post`, {
-            //   method: "POST",
-            //   headers: { "Content-Type": "application/json" },
-            //   body: JSON.stringify({
-            //     caption,
-            //     image_url: imageUrl,
-            //     long_lived_token: "EAAHaB1oOYrwBP72ZAeEtrn3CsZA8gRVHOZBdZCVbGZCkyTZBf8s82qzswkWBPoVZA2Ku1kBlXkHJJgexhhMSDndqfc37XwkjnXiE9souC9LxfldXQE4mxm0ZALPsVyiFxvig3qyuXioaOTZA7IlSmYmRrFyusY15YZBXoovXpKAZA4EnaSzQzxsEcWgSsBIrykT0U6H", // only needed once
-            //   }),
-            // });
-
-            const instagramResult = await instagramResponse.json();
-
-            if (!instagramResponse.ok) {
-              throw new Error(instagramResult.error || "Failed to publish on Instagram");
-            }
-
-            console.log("✅ Instagram post successful:", instagramResult);
-            alert("✅ Post published successfully to Instagram!");
-
-          } catch (error) {
-            console.error("❌ Failed to post to Instagram:", error);
-            alert("Post saved but failed to publish on Instagram. Check console for details.");
-          }
-        }
-
-
-        // 4️⃣ Validate LinkedIn connection (but DO NOT publish immediately)
-        if (newPost.platforms.includes("linkedin")) {
-          try {
-            console.log("🔵 Checking LinkedIn connection for client:", selectedClient.id);
-
-            const lnRes = await fetch(
-              `${BASE_URL}/api/clients/${selectedClient.id}/linkedin/account`
-            );
-
-            if (lnRes.status === 404) throw new Error("LinkedIn not connected");
-            if (!lnRes.ok) throw new Error("Failed to verify LinkedIn connection");
-
-            const lnAccount = await lnRes.json();
-            console.log("✔ LinkedIn account found:", lnAccount);
-
-            // DO NOT PUBLISH HERE!
-            // Worker will publish when scheduled_at <= NOW()
-
-          } catch (error) {
-            console.error("❌ LinkedIn check failed:", error);
-            alert("Post saved but LinkedIn is NOT connected for this client.");
-          }
-        }
 
 
 
 
-        if (newPost.platforms.includes('twitter')) {
-          try {
-            console.log("🐦 Fetching Twitter account for client:", selectedClient.id);
 
-            // 1️⃣ Get Twitter OAuth credentials from database
-            const twRes = await fetch(
-              `${BASE_URL}/api/clients/${selectedClient.id}/twitter/account`
-            );
 
-            if (!twRes.ok) throw new Error("Twitter not connected for this client");
 
-            const twAccount = await twRes.json();
 
-            console.log("🐦 Twitter credentials:", twAccount);
 
-            // // 2️⃣ Publish through backend /publish/twitter
-            // const publishRes = await fetch("http://localhost:5000/api/publish/twitter", {
-            //   method: "POST",
-            //   headers: { "Content-Type": "application/json" },
-            //   body: JSON.stringify({
-            //     oauth_token: twAccount.oauth_token,
-            //     oauth_token_secret: twAccount.oauth_token_secret,
-            //     status: newPost.content,
-            //     media_url: imageUrl
-            //   })
-            // });
-
-            // const publishResult = await publishRes.json();
-            // console.log("🐦 Twitter publish result:", publishResult);
-
-          } catch (err) {
-            console.error("❌ Twitter publish failed:", err);
-          }
-        }
       } catch (error) {
         console.error("❌ Error adding post:", error);
         alert("Failed to save post. Check console for details.");
@@ -516,42 +336,55 @@ async function loadPublished() {
     }
   };
 
+  const goToPrevMonth = () => {
+    setMonthDirection("prev");
+    setCalendarDate(prev =>
+      new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
+    );
+  };
 
-  // 1. First, connect Instagram account for client with ID 9
-  // const connectInstagram = async () => {
-  //   const longLivedToken = 'EAAHaB1oOYrwBP72ZAeEtrn3CsZA8gRVHOZBdZCVbGZCkyTZBf8s82qzswkWBPoVZA2Ku1kBlXkHJJgexhhMSDndqfc37XwkjnXiE9souC9LxfldXQE4mxm0ZALPsVyiFxvig3qyuXioaOTZA7IlSmYmRrFyusY15YZBXoovXpKAZA4EnaSzQzxsEcWgSsBIrykT0U6H';
+  const goToNextMonth = () => {
+    setMonthDirection("next");
+    setCalendarDate(prev =>
+      new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
+    );
+  };
 
-  //   const response = await fetch('/api/clients/9/instagram/connect', {
-  //     method: 'POST',
-  //     headers: { 'Content-Type': 'application/json' },
-  //     body: JSON.stringify({ long_lived_token: longLivedToken })
-  //   });
 
-  //   const data = await response.json();
-  //   console.log('Connected:', data);
-  // };
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
 
-  // 2. Post to client's Instagram
-  // const postToInstagram = async () => {
-  //   const response = await fetch('/api/clients/9/instagram/post', {
-  //     method: 'POST',
-  //     headers: { 'Content-Type': 'application/json' },
-  //     body: JSON.stringify({
-  //       image_url: 'https://example.com/your-image.jpg',
-  //       caption: 'Check out this amazing post! #instagram #socialmedia'
-  //     })
-  //   });
+    // Dropped outside any valid cell
+    if (!over) return;
 
-  //   const data = await response.json();
-  //   console.log('Posted:', data);
-  // };
+    const postId = active.id;      // post id
+    const newDate = over.id;       // YYYY-MM-DD
 
-  // 3. Get client's Instagram posts
-  // const getPosts = async () => {
-  //   const response = await fetch('/api/clients/9/instagram/posts?limit=10');
-  //   const data = await response.json();
-  //   console.log('Posts:', data);
-  // };
+    // No change
+    const post = posts.find(p => p.id === postId);
+    if (!post || post.date === newDate) return;
+
+    // 🔹 Update UI immediately (optimistic update)
+    setPosts(prev =>
+      prev.map(p =>
+        p.id === postId
+          ? { ...p, date: newDate }
+          : p
+      )
+    );
+
+    try {
+      // 🔹 Persist to backend
+      await fetch(`${BASE_URL}/api/posts/${postId}/reschedule`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: newDate })
+      });
+    } catch (err) {
+      console.error("Failed to reschedule post", err);
+    }
+  };
+
 
 
   const deleteClient = async (clientId) => {
@@ -651,10 +484,11 @@ async function loadPublished() {
     ? posts.filter(p => p.clientId === selectedClient.id)
     : posts
 
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
+      <header className="bg-white border-b border-gray-200 shadow-sm sticky">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -764,84 +598,89 @@ async function loadPublished() {
           {/* Main Content */}
           <div className="lg:col-span-3 space-y-6">
             {/* Add Post Section */}
-            <Card className="border-2 border-dashed border-gray-300 hover:border-blue-400 transition-colors">
-              <CardHeader>
-                <Button
-                  variant="ghost"
-                  className="w-full gap-2 hover:bg-blue-50"
-                  onClick={() => setShowAddPost(!showAddPost)}
-                  disabled={clients.length === 0}
+            {isSchedulerOpen && (
+              <div
+                className={`
+      fixed inset-0 z-50 flex items-center justify-center
+      bg-black/40
+      transition-opacity duration-200
+      ${isClosing ? "opacity-0" : "opacity-100"}
+    `}
+                onClick={closeScheduler} // 👈 outside click
+              >
+                <Card
+                  className={`
+        w-full max-w-lg
+        transform transition-all duration-200
+        ${isClosing
+                      ? "scale-95 opacity-0"
+                      : "scale-100 opacity-100"}
+      `}
+                  onClick={(e) => e.stopPropagation()} // 👈 prevent close inside
                 >
-                  <Plus className="w-5 h-5" />
-                  Schedule New Post
-                </Button>
-              </CardHeader>
+                  <CardHeader>
+                    <CardTitle>
+                      Schedule Post — {selectedDate}
+                    </CardTitle>
+                  </CardHeader>
 
-              {showAddPost && (
-                <CardContent className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
-                  {/* Client Selection */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Client</label>
-                    <div className="flex gap-2 flex-wrap">
-                      {clients.map(client => (
-                        <Button
-                          key={client.id}
-                          size="sm"
-                          variant={selectedClient?.id === client.id ? "default" : "outline"}
-                          onClick={() => setSelectedClient(client)}
-                        >
-                          {client.name}
-                        </Button>
-                      ))}
+                  <CardContent className="space-y-4">
+                    {/* Client */}
+                    <div>
+                      <label className="text-sm font-medium">Client</label>
+                      <div className="flex gap-2 flex-wrap">
+                        {clients.map(client => (
+                          <Button
+                            key={client.id}
+                            size="sm"
+                            variant={selectedClient?.id === client.id ? "default" : "outline"}
+                            onClick={() => setSelectedClient(client)}
+                          >
+                            {client.name}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Post Content */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Post Content</label>
+                    {/* Content */}
                     <Textarea
-                      placeholder="What would you like to post?"
+                      placeholder="Post content"
                       value={newPost.content}
-                      onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-                      rows={4}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Upload Image/Video</label>
-                    <input
-                      type="file"
-                      accept="image/*,video/*"
-                      onChange={(e) => setNewPost({ ...newPost, file: e.target.files[0] })}
+                      onChange={(e) =>
+                        setNewPost({ ...newPost, content: e.target.value })
+                      }
                     />
 
-                  </div>
-
-                  {/* Date and Time */}
-                  <div className="grid grid-cols-2 gap-4">
+                    {/* Upload Image / Video */}
                     <div>
-                      <label className="text-sm font-medium mb-2 block">Date</label>
-                      <Input
-                        type="date"
-                        value={newPost.date}
-                        onChange={(e) => setNewPost({ ...newPost, date: e.target.value })}
-                        min="2020-01-01"
-                        max="2099-12-31"
+                      <label className="text-sm font-medium mb-1 block">
+                        Upload Image / Video
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*,video/*"
+                        onChange={(e) =>
+                          setNewPost({
+                            ...newPost,
+                            file: e.target.files?.[0] || null
+                          })
+                        }
                       />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Time</label>
-                      <Input
-                        type="time"
-                        value={newPost.time}
-                        onChange={(e) => setNewPost({ ...newPost, time: e.target.value })}
-                      />
-                    </div>
-                  </div>
 
-                  {/* Platforms */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Platforms</label>
+
+                    </div>
+
+
+                    {/* Time */}
+                    <Input
+                      type="time"
+                      value={newPost.time}
+                      onChange={(e) =>
+                        setNewPost({ ...newPost, time: e.target.value })
+                      }
+                    />
+
+                    {/* Platforms */}
                     <div className="flex gap-2 flex-wrap">
                       {Object.keys(platformIcons).map(platform => (
                         <Button
@@ -849,146 +688,267 @@ async function loadPublished() {
                           size="sm"
                           variant={newPost.platforms.includes(platform) ? "default" : "outline"}
                           onClick={() => togglePlatform(platform)}
-                          className="gap-2 capitalize"
                         >
-                          {platformIcons[platform]}
-                          {platform}
+                          {platformIcons[platform]} {platform}
                         </Button>
                       ))}
                     </div>
-                  </div>
 
-                  <div className="flex gap-2">
-                    <Button onClick={addPost} className="flex-1">
-                      Add Post
-                    </Button>
-                    <Button variant="outline" onClick={() => setShowAddPost(false)}>
-                      Cancel
-                    </Button>
-                  </div>
-                </CardContent>
-              )}
-            </Card>
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <Button onClick={addPost} className="flex-1">
+                        Schedule
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setNewPost({
+                            content: '',
+                            date: '',
+                            time: '',
+                            platforms: [],
+                            file: null
+                          });
+                          setIsSchedulerOpen(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
 
-            {/* Posts Calendar View */}
-            <div>
-              <h2 className="text-xl font-semibold mb-4">
-                {selectedClient ? `${selectedClient.name}'s Schedule` : 'All Scheduled Posts'}
-              </h2>
-
-              {filteredPosts.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">No posts scheduled yet</p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      {clients.length === 0
-                        ? "Add a client first, then schedule your first post"
-                        : "Click 'Schedule New Post' to get started"}
-                    </p>
+                    </div>
                   </CardContent>
                 </Card>
-              ) : (
-                <div className="space-y-4">
-                  {sortedDates.map(date => {
-                    const postsOnDate = getPostsByDate()[date].filter(post =>
-                      !selectedClient || post.clientId === selectedClient.id
-                    )
+              </div>
+            )}
 
-                    if (postsOnDate.length === 0) return null
 
-                    return (
-                      <div key={date}>
-                        <div className="flex items-center gap-3 mb-3">
-                          <Badge variant="outline" className="text-sm">
-                            {new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric'
-                            })}
-                          </Badge>
-                          <div className="flex-1 h-px bg-gray-200"></div>
-                        </div>
+            <div className="flex items-center justify-between mb-4">
+              <Button variant="outline" size="sm" onClick={goToPrevMonth}>
+                ←
+              </Button>
 
-                        <div className="space-y-3">
-                          {postsOnDate
-                            .sort((a, b) => (a.time || "").localeCompare(b.time || ""))
-                            .map(post => (
-                              <Card key={post.id} className="hover:shadow-md transition-shadow">
-                                <CardContent className="p-4">
-                                  <div className="flex items-start justify-between gap-4">
-                                    <div className="flex-1 space-y-2">
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        <Badge className="bg-gradient-to-r from-blue-500 to-purple-600">
-                                          {post.clientName}
-                                        </Badge>
-                                        <span className="text-sm font-medium text-gray-600">
-                                          {post.time}
-                                        </span>
-                                        <div className="flex gap-1">
-                                          {post.platforms.map(platform => (
-                                            <div
-                                              key={platform}
-                                              className={`${platformColors[platform]} p-1.5 rounded text-white`}
-                                              title={platform}
-                                            >
-                                              {platformIcons[platform]}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                      <p className="text-gray-700 whitespace-pre-wrap">
-                                        {post.content}
-                                      </p>
-                                    </div>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => deletePost(post.id)}
-                                      className="hover:bg-red-50"
-                                    >
-                                      <Trash2 className="w-4 h-4 text-red-500" />
-                                    </Button>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+              <h2 className="text-lg font-semibold">
+                {calendarDate.toLocaleString("en-US", {
+                  month: "long",
+                  year: "numeric"
+                })}
+              </h2>
+
+              <Button variant="outline" size="sm" onClick={goToNextMonth}>
+                →
+              </Button>
             </div>
+
+
+
+
+
+            <DndContext onDragEnd={handleDragEnd}>
+              <div
+                key={calendarDate.toISOString()}
+                className={`transition-all duration-300 ease-in-out
+    ${monthDirection === "next"
+                    ? "animate-slide-left"
+                    : "animate-slide-right"}
+  `}
+              >
+                <MonthCalendar
+                  posts={filteredPosts}
+                  calendarDate={calendarDate}
+                  onDateClick={(date) => {
+                    setSelectedDate(date);
+
+                    setNewPost(prev => ({
+                      ...prev,
+                      date,
+                      time: prev.time || "09:00"
+                    }));
+
+                    if (!selectedClient && clients.length === 1) {
+                      setSelectedClient(clients[0]);
+                    }
+
+                    setIsSchedulerOpen(true);
+                  }}
+
+                />
+              </div>
+            </DndContext>
+
+
+            {/* Posts Calendar View */}
+           <div>
+  <h2 className="text-xl font-semibold mb-4">
+    {selectedClient ? `${selectedClient.name}'s Schedule` : 'All Scheduled Posts'}
+  </h2>
+
+  {filteredPosts.length === 0 ? (
+    <Card>
+      <CardContent className="py-12 text-center">
+        <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <p className="text-gray-500">No posts scheduled yet</p>
+      </CardContent>
+    </Card>
+  ) : (
+    <Card>
+      <CardContent className="p-0 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">Date</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">Time</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">Client</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">Platforms</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">Content</th>
+              <th className="px-4 py-3 text-right font-medium text-gray-600">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {filteredPosts
+              .sort(
+                (a, b) =>
+                  `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)
+              )
+              .map(post => (
+                <tr
+                  key={post.id}
+                  className="border-b last:border-b-0 hover:bg-gray-50 transition"
+                >
+                  {/* Date */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {new Date(post.date + "T00:00:00").toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric"
+                    })}
+                  </td>
+
+                  {/* Time */}
+                  <td className="px-4 py-3 font-medium text-gray-700">
+                    {post.time}
+                  </td>
+
+                  {/* Client */}
+                  <td className="px-4 py-3">
+                    <Badge className="bg-gradient-to-r from-blue-500 to-purple-600">
+                      {post.clientName}
+                    </Badge>
+                  </td>
+
+                  {/* Platforms */}
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1">
+                      {post.platforms.map(platform => (
+                        <div
+                          key={platform}
+                          className={`${platformColors[platform]} p-1.5 rounded text-white`}
+                          title={platform}
+                        >
+                          {platformIcons[platform]}
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+
+                  {/* Content */}
+                  <td className="px-4 py-3 max-w-md truncate text-gray-700">
+                    {post.content}
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-4 py-3 text-right">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => deletePost(post.id)}
+                      className="hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </CardContent>
+    </Card>
+  )}
+</div>
+
 
             {/* ================================
     🚀 QUEUED POSTS (Worker Pending)
    ================================ */}
             <div className="mt-10">
-              <h2 className="text-xl font-semibold mb-3">Queued Posts (Waiting for Worker)</h2>
+              <h2 className="text-xl font-semibold mb-3">
+                Queued Posts (Waiting for Worker)
+              </h2>
 
               {queuedPosts.length === 0 ? (
                 <p className="text-gray-500">No queued posts found.</p>
               ) : (
-                <div className="space-y-3">
-                  {queuedPosts.map(q => (
-                    <Card key={q.id}>
-                      <CardContent className="p-4 flex justify-between">
-                        <div>
-                          <p className="font-medium">{q.platform.toUpperCase()}</p>
-                          <p className="text-gray-600">{q.caption}</p>
-                          <p className="text-sm text-gray-500">
-                            Scheduled: {q.scheduled_at}
-                          </p>
-                          <p className="text-sm text-gray-400">
-                            Status: {q.status}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                <Card>
+                  <CardContent className="p-0 overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium text-gray-600">
+                            Platform
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-600">
+                            Caption
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-600">
+                            Scheduled At
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-600">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {queuedPosts.map(q => (
+                          <tr
+                            key={q.id}
+                            className="border-b last:border-b-0 hover:bg-gray-50 transition"
+                          >
+                            {/* Platform */}
+                            <td className="px-4 py-3 font-medium">
+                              {q.platform.toUpperCase()}
+                            </td>
+
+                            {/* Caption */}
+                            <td className="px-4 py-3 text-gray-700 max-w-md truncate">
+                              {q.caption || "-"}
+                            </td>
+
+                            {/* Scheduled */}
+                            <td className="px-4 py-3 text-gray-600">
+                              {new Date(q.scheduled_at).toLocaleString()}
+                            </td>
+
+                            {/* Status */}
+                            <td className="px-4 py-3">
+                              <span
+                                className={`
+                      inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                      ${q.status === "queued" && "bg-yellow-100 text-yellow-800"}
+                      ${q.status === "processing" && "bg-blue-100 text-blue-800"}
+                      ${q.status === "posted" && "bg-green-100 text-green-800"}
+                      ${q.status === "failed" && "bg-red-100 text-red-800"}
+                    `}
+                              >
+                                {q.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
               )}
             </div>
 
@@ -996,29 +956,72 @@ async function loadPublished() {
     🟢 PUBLISHED POSTS HISTORY
    ================================ */}
             <div className="mt-10">
-              <h2 className="text-xl font-semibold mb-3">Published Posts (History)</h2>
+              <h2 className="text-xl font-semibold mb-3">
+                Published Posts (History)
+              </h2>
 
               {publishedPosts.length === 0 ? (
                 <p className="text-gray-500">No published posts yet.</p>
               ) : (
-                <div className="space-y-3">
-                  {publishedPosts.map(p => (
-                    <Card key={p.id}>
-                      <CardContent className="p-4 flex justify-between">
-                        <div>
-                          <p className="font-medium">{p.platform.toUpperCase()}</p>
-                          <p className="text-gray-600">{p.caption}</p>
-                          <p className="text-sm text-gray-500">
-                            Result: {p.status}
-                          </p>
-                          <p className="text-sm text-gray-400">
-                            Posted: {p.created_at}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                <Card>
+                  <CardContent className="p-0 overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium text-gray-600">
+                            Platform
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-600">
+                            Caption
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-600">
+                            Status
+                          </th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-600">
+                            Posted At
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {publishedPosts.map(p => (
+                          <tr
+                            key={p.id}
+                            className="border-b last:border-b-0 hover:bg-gray-50 transition"
+                          >
+                            {/* Platform */}
+                            <td className="px-4 py-3 font-medium">
+                              {p.platform.toUpperCase()}
+                            </td>
+
+                            {/* Caption */}
+                            <td className="px-4 py-3 text-gray-700 max-w-md truncate">
+                              {p.caption || "-"}
+                            </td>
+
+                            {/* Status */}
+                            <td className="px-4 py-3">
+                              <span
+                                className={`
+                      inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                      ${p.status === "success" && "bg-green-100 text-green-800"}
+                      ${p.status === "failed" && "bg-red-100 text-red-800"}
+                    `}
+                              >
+                                {p.status}
+                              </span>
+                            </td>
+
+                            {/* Created At */}
+                            <td className="px-4 py-3 text-gray-600">
+                              {new Date(p.created_at).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
               )}
             </div>
 
