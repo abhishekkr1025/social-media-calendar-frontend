@@ -6,13 +6,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge.jsx'
 import { Calendar, Plus, Download, Trash2, Facebook, Instagram, Twitter, Linkedin, Youtube } from 'lucide-react'
 
+
 import '../App.css'
 import { useNavigate } from 'react-router-dom'
 import { SiWordpress } from 'react-icons/si'
 import MonthCalendar from '@/components/MonthCalendar'
 import { DndContext } from "@dnd-kit/core";
 import { usePagination } from '@/services/usePagination'
+import Sidebar from "../components/Sidebar";
+
+
 import TablePagination from "@/components/TablePagination";
+
 
 
 
@@ -520,7 +525,21 @@ function Dashboard() {
 
 
   return (
+
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 top-0">
+         {/* Sidebar */}
+    <Sidebar
+      clients={clients}
+      posts={posts}
+      selectedClient={selectedClient}
+      setSelectedClient={setSelectedClient}
+      newClient={newClient}
+      setNewClient={setNewClient}
+      showAddClient={showAddClient}
+      setShowAddClient={setShowAddClient}
+      addClient={addClient}
+      deleteClient={deleteClient}
+    />
       {/* Header */}
       <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 bg-black z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -552,85 +571,11 @@ function Dashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar - Clients */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Clients</CardTitle>
-                  <Button
-                    size="sm"
-                    onClick={() => handleAddClient()}
-                    className="gap-1"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add
-                  </Button>
+          
 
-                  {/* <Button
-                    size="sm"
-                    onClick={addClient}
-                    className="gap-1"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add
-                  </Button>  */}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {showAddClient && (
-                  <div className="flex gap-2 mb-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <Input
-                      placeholder="Client name"
-                      value={newClient}
-                      onChange={(e) => setNewClient(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && addClient()}
-                    />
-                    <Button size="sm" onClick={addClient}>Add</Button>
-                  </div>
-                )}
-
-                <Button
-                  variant={selectedClient === null ? "default" : "ghost"}
-                  className="w-full justify-start"
-                  onClick={() => setSelectedClient(null)}
-                >
-                  All Clients ({posts.length})
-                </Button>
-
-
-
-                {clients.map(client => (
-                  <div key={client.id} className="flex items-center gap-2 group">
-                    <Button
-                      variant={selectedClient?.id === client.id ? "default" : "ghost"}
-                      className="flex-1 justify-start"
-                      onClick={() => setSelectedClient(client)}
-                    >
-                      {client.name} ({posts.filter(p => p.clientId === client.id).length})
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => deleteClient(client.id)}
-                    >
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </Button>
-                  </div>
-                ))}
-
-                {clients.length === 0 && !showAddClient && (
-                  <p className="text-sm text-gray-500 text-center py-4">
-                    No clients yet. Add one to get started!
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-3 space-y-6 flex-1 ml-25">
             {/* Add Post Section */}
             {isSchedulerOpen && (
               <div
@@ -1220,6 +1165,31 @@ function Dashboard() {
       </div>
     </div>
   )
+  
+//   return (
+//   <div className="flex min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    
+//     {/* Sidebar */}
+//     <Sidebar />
+
+//     {/* Main Content */}
+//     <div className="flex-1 ml-64">
+//       {/* existing dashboard code yahin rahega */}
+      
+//       <header className="bg-white border-b shadow-sm sticky top-0 z-40">
+//         ...
+//       </header>
+
+//       <div className="max-w-7xl mx-auto px-4 py-8">
+//         ...
+//       </div>
+
+//     </div>
+//   </div>
+// )
+
+
+
 }
 
 export default Dashboard
