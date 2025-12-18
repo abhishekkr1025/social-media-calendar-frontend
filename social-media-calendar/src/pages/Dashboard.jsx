@@ -13,6 +13,7 @@ import MonthCalendar from '@/components/MonthCalendar'
 import { DndContext } from "@dnd-kit/core";
 import { usePagination } from '@/services/usePagination'
 import TablePagination from "@/components/TablePagination";
+import WordPressSchedulerModal from '@/components/WordPressSchedulerModal'
 
 
 
@@ -33,6 +34,11 @@ function Dashboard() {
   const [monthDirection, setMonthDirection] = useState("next"); // "next" | "prev"
   const [rawPosts, setRawPosts] = useState([]);
   const [isClosing, setIsClosing] = useState(false);
+  const [isWpSchedulerOpen, setIsWpSchedulerOpen] = useState(false);
+  const [schedulerType, setSchedulerType] = useState("social");
+  // "social" | "blog"
+
+
 
 
 
@@ -44,6 +50,17 @@ function Dashboard() {
     platforms: [],
     file: null
   })
+
+  const [wpPost, setWpPost] = useState({
+    title: "",
+    content: "",
+    excerpt: "",
+    date: "",
+    time: "09:00",
+    file: null,
+    wpStatus: "publish"
+  });
+
 
   const {
     page: queuedPage,
@@ -93,6 +110,57 @@ function Dashboard() {
   }, [clients, rawPosts]);
 
 
+  const scheduleWordPressPost = async () => {
+    if (!selectedClient) {
+      return alert("Please select a client");
+    }
+
+    if (!wpPost.title || !wpPost.content) {
+      return alert("Title and content are required");
+    }
+
+    console.log(`Date: ${wpPost.date}`);
+    console.log(`Time: ${wpPost.time}`);
+
+    if (!wpPost.date || !wpPost.time) {
+      return alert("Please select date and time");
+    }
+
+    const scheduled_at = `${wpPost.date} ${wpPost.time}:00`;
+
+    const formData = new FormData();
+    formData.append("clientId", selectedClient.id);
+    formData.append("title", wpPost.title);
+    formData.append("content", wpPost.content);
+    formData.append("excerpt", wpPost.excerpt || "");
+    formData.append("scheduled_at", scheduled_at);
+    formData.append("status", "scheduled");
+
+    if (wpPost.file) {
+      formData.append("file", wpPost.file);
+    }
+
+    console.log(formData.get("scheduled_at"));
+    console.log(formData.get("title"))
+    console.log(formData.get("content"))
+    console.log(formData.get("clientId"))
+
+    const res = await fetch(`${BASE_URL}/api/wp-posts`, {
+      method: "POST",
+      body: formData
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error(err);
+      alert("Failed to schedule blog post");
+      return;
+    }
+
+    setIsWpSchedulerOpen(false);
+  };
+
+
 
 
 
@@ -116,6 +184,11 @@ function Dashboard() {
     }, 200); // must match animation duration
   };
 
+  const loadWpPosts = async () => {
+    const res = await fetch(`${BASE_URL}/api/wp-posts`);
+    const data = await res.json();
+    setWpPosts(data);
+  };
 
 
   async function loadAllPosts() {
@@ -221,6 +294,8 @@ function Dashboard() {
 
 
 
+
+
   const addPost = async () => {
     console.log("function called");
     var isTrue = selectedClient &&
@@ -264,6 +339,8 @@ function Dashboard() {
         formData.append("file", newPost.file);
 
         console.log("formdata: ", JSON.stringify(formData));
+
+        console.log(formData.get("scheduled_at"))
 
         const response = await fetch(`${BASE_URL}/api/posts`, {
           method: "POST",
@@ -640,34 +717,60 @@ function Dashboard() {
       transition-opacity duration-200
       ${isClosing ? "opacity-0" : "opacity-100"}
     `}
-                onClick={closeScheduler} // 👈 outside click
+                onClick={closeScheduler} // outside click
               >
                 <Card
                   className={`
         w-full max-w-lg
         transform transition-all duration-200
-        ${isClosing
-                      ? "scale-95 opacity-0"
-                      : "scale-100 opacity-100"}
+        ${isClosing ? "scale-95 opacity-0" : "scale-100 opacity-100"}
       `}
-                  onClick={(e) => e.stopPropagation()} // 👈 prevent close inside
+                  onClick={(e) => e.stopPropagation()} // prevent outside close
                 >
                   <CardHeader>
                     <CardTitle>
-                      Schedule Post — {selectedDate}
+                      Schedule {schedulerType === "social" ? "Social Post" : "Blog Post"} —{" "}
+                      {selectedDate}
                     </CardTitle>
                   </CardHeader>
 
                   <CardContent className="space-y-4">
-                    {/* Client */}
+                    {/* 🔀 TOGGLE */}
+                    <div className="flex rounded-lg bg-gray-100 p-1">
+                      <button
+                        className={`flex-1 py-2 rounded-md text-sm font-medium transition
+              ${schedulerType === "social"
+                            ? "bg-white shadow text-blue-600"
+                            : "text-gray-500 hover:text-gray-700"
+                          }`}
+                        onClick={() => setSchedulerType("social")}
+                      >
+                        Social Post
+                      </button>
+
+                      <button
+                        className={`flex-1 py-2 rounded-md text-sm font-medium transition
+              ${schedulerType === "blog"
+                            ? "bg-white shadow text-purple-600"
+                            : "text-gray-500 hover:text-gray-700"
+                          }`}
+                        onClick={() => setSchedulerType("blog")}
+                      >
+                        Blog Post
+                      </button>
+                    </div>
+
+                    {/* 👤 CLIENT */}
                     <div>
                       <label className="text-sm font-medium">Client</label>
                       <div className="flex gap-2 flex-wrap">
-                        {clients.map(client => (
+                        {clients.map((client) => (
                           <Button
                             key={client.id}
                             size="sm"
-                            variant={selectedClient?.id === client.id ? "default" : "outline"}
+                            variant={
+                              selectedClient?.id === client.id ? "default" : "outline"
+                            }
                             onClick={() => setSelectedClient(client)}
                           >
                             {client.name}
@@ -676,84 +779,135 @@ function Dashboard() {
                       </div>
                     </div>
 
-                    {/* Content */}
-                    <Textarea
-                      placeholder="Post content"
-                      value={newPost.content}
-                      onChange={(e) =>
-                        setNewPost({ ...newPost, content: e.target.value })
-                      }
-                    />
+                    {/* =====================
+            SOCIAL POST
+        ===================== */}
+                    {schedulerType === "social" && (
+                      <>
+                        <Textarea
+                          placeholder="Post content"
+                          value={newPost.content}
+                          onChange={(e) =>
+                            setNewPost({ ...newPost, content: e.target.value })
+                          }
+                        />
 
-                    {/* Upload Image / Video */}
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">
-                        Upload Image / Video
-                      </label>
-                      <input
-                        type="file"
-                        accept="image/*,video/*"
-                        onChange={(e) =>
-                          setNewPost({
-                            ...newPost,
-                            file: e.target.files?.[0] || null
-                          })
-                        }
-                      />
+                        <div>
+                          <label className="text-sm font-medium mb-1 block">
+                            Upload Image / Video
+                          </label>
+                          <input
+                            type="file"
+                            accept="image/*,video/*"
+                            onChange={(e) =>
+                              setNewPost({
+                                ...newPost,
+                                file: e.target.files?.[0] || null,
+                              })
+                            }
+                          />
+                        </div>
 
+                        <div className="flex gap-2 flex-wrap">
+                          {Object.keys(platformIcons)
+                            .filter((p) => p !== "wordpress")
+                            .map((platform) => (
+                              <Button
+                                key={platform}
+                                size="sm"
+                                variant={
+                                  newPost.platforms.includes(platform)
+                                    ? "default"
+                                    : "outline"
+                                }
+                                onClick={() => togglePlatform(platform)}
+                              >
+                                {platformIcons[platform]} {platform}
+                              </Button>
+                            ))}
+                        </div>
+                      </>
+                    )}
 
-                    </div>
+                    {/* =====================
+            BLOG POST (WORDPRESS)
+        ===================== */}
+                    {schedulerType === "blog" && (
+                      <>
+                        <Input
+                          placeholder="Blog title"
+                          value={wpPost.title}
+                          onChange={(e) =>
+                            setWpPost({ ...wpPost, title: e.target.value })
+                          }
+                        />
 
+                        <Textarea
+                          placeholder="Write your blog content..."
+                          rows={6}
+                          value={wpPost.content}
+                          onChange={(e) =>
+                            setWpPost({ ...wpPost, content: e.target.value })
+                          }
+                        />
 
-                    {/* Time */}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) =>
+                            setWpPost({
+                              ...wpPost,
+                              featuredImage: e.target.files?.[0] || null,
+                            })
+                          }
+                        />
+                        <Textarea
+                          placeholder="Excerpt (optional)"
+                          rows={2}
+                          value={wpPost.excerpt}
+                          onChange={(e) =>
+                            setWpPost({ ...wpPost, excerpt: e.target.value })
+                          }
+                        />
+                      </>
+                    )}
+
+                    {/* ⏰ TIME */}
                     <Input
                       type="time"
-                      value={newPost.time}
+                      value={wpPost.time}
                       onChange={(e) =>
-                        setNewPost({ ...newPost, time: e.target.value })
+                        setWpPost({ ...wpPost, time: e.target.value })
                       }
                     />
 
-                    {/* Platforms */}
-                    <div className="flex gap-2 flex-wrap">
-                      {Object.keys(platformIcons).map(platform => (
-                        <Button
-                          key={platform}
-                          size="sm"
-                          variant={newPost.platforms.includes(platform) ? "default" : "outline"}
-                          onClick={() => togglePlatform(platform)}
-                        >
-                          {platformIcons[platform]} {platform}
-                        </Button>
-                      ))}
-                    </div>
-
-                    {/* Actions */}
+                    {/* 🔘 ACTIONS */}
                     <div className="flex gap-2">
-                      <Button onClick={addPost} className="flex-1">
-                        Schedule
+                      <Button
+                        className="flex-1"
+                        onClick={() =>
+                          schedulerType === "social"
+                            ? addPost()
+                            : scheduleWordPressPost()
+                        }
+                      >
+                        Schedule {schedulerType === "social" ? "Post" : "Blog"}
                       </Button>
+
                       <Button
                         variant="outline"
-                        onClick={() => {
-                          setNewPost({
-                            content: '',
-                            date: '',
-                            time: '',
-                            platforms: [],
-                            file: null
-                          });
-                          setIsSchedulerOpen(false);
-                        }}
+                        onClick={closeScheduler}
                       >
                         Cancel
                       </Button>
-
                     </div>
                   </CardContent>
                 </Card>
               </div>
             )}
+
+
+
 
 
             <div className="flex items-center justify-between mb-4">
@@ -793,6 +947,13 @@ function Dashboard() {
                     setSelectedDate(date);
 
                     setNewPost(prev => ({
+                      ...prev,
+                      date,
+                      time: prev.time || "09:00"
+                    }));
+
+                    // ✅ WordPress post (THIS WAS MISSING)
+                    setWpPost(prev => ({
                       ...prev,
                       date,
                       time: prev.time || "09:00"
@@ -1055,7 +1216,7 @@ function Dashboard() {
                             <td className="px-4 py-3 truncate max-w-md">
                               {q.title}
                             </td>
-                           
+
                             <td className="px-4 py-3">
                               <span
                                 className={`
@@ -1070,7 +1231,7 @@ function Dashboard() {
                               </span>
                             </td>
 
-                             <td className="px-4 py-3 text-gray-600">
+                            <td className="px-4 py-3 text-gray-600">
                               {new Date(q.scheduled_at).toLocaleString()}
                             </td>
                           </tr>
