@@ -38,6 +38,9 @@ function Dashboard() {
   const [monthDirection, setMonthDirection] = useState("next"); // "next" | "prev"
   const [rawPosts, setRawPosts] = useState([]);
   const [isClosing, setIsClosing] = useState(false);
+const [isCollapsed, setIsCollapsed] = useState(false);
+
+
 
 
 
@@ -524,83 +527,114 @@ function Dashboard() {
 
 
 
-  return (
+return (
+  <div className="flex min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+   
+ {/* LEFT SIDEBAR */}
+<Sidebar
+  clients={clients}
+  posts={posts}
+  selectedClient={selectedClient}
+  setSelectedClient={setSelectedClient}
+  newClient={newClient}
+  setNewClient={setNewClient}
+  showAddClient={showAddClient}
+  setShowAddClient={setShowAddClient}
+  addClient={addClient}
+  deleteClient={deleteClient}
+  isCollapsed={isCollapsed}
+/>
 
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 top-0">
-         {/* Sidebar */}
-    <Sidebar
-      clients={clients}
-      posts={posts}
-      selectedClient={selectedClient}
-      setSelectedClient={setSelectedClient}
-      newClient={newClient}
-      setNewClient={setNewClient}
-      showAddClient={showAddClient}
-      setShowAddClient={setShowAddClient}
-      addClient={addClient}
-      deleteClient={deleteClient}
-    />
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 bg-black z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-2 rounded-lg">
-                <Calendar className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Social Media Calendar</h1>
-                <p className="text-sm text-gray-500">Manage posts for all your clients</p>
-              </div>
-            </div>
-            <Button onClick={exportToCSV} variant="outline" className="gap-2">
-              <Download className="w-4 h-4" />
-              Export CSV
-            </Button>
+{/* RIGHT SIDE: HEADER + MAIN CONTENT */}
+<div
+  className={`flex-1 flex flex-col transition-all duration-300
+    ${isCollapsed ? "ml-0" : "ml-64"}
+  `}
+>
 
-
-            <Button onClick={handleConnectButton} variant="outline" className="gap-2">
-
-              Connect to Platforms
-            </Button>
-
-
+  <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50 w-full">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-2 rounded-lg">
+            <Calendar className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Social Media Calendar
+            </h1>
+            <p className="text-sm text-gray-500">
+              Manage posts for all your clients
+            </p>
           </div>
         </div>
-      </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="flex gap-2">
+          {/* <Button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            variant="outline"
+            className="gap-2"
+          >
+            {isCollapsed ? "Expand" : "Collapse"}
+          </Button> */}
+          <Sidebar
+  isCollapsed={isCollapsed}
+  toggleSidebar={() => setIsCollapsed(prev => !prev)}
+/>
+
           
+          
+          <Button onClick={exportToCSV} variant="outline" className="gap-2">
+            <Download className="w-4 h-4" />
+            Export CSV
+          </Button>
+          <Button
+            onClick={handleConnectButton}
+            variant="outline"
+            className="gap-2"
+          >
+            Connect to Platforms
+          </Button>
+        </div>
+      </div>
+    </div>
+  </header>
 
 
-          {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6 flex-1 ml-25">
+
+
+
+
+      {/* MAIN CONTENT */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* NOTE: yahan grid ki zaroorat nahi, kyunki clients ab Sidebar me hai */}
+          <div className="space-y-6">
             {/* Add Post Section */}
             {isSchedulerOpen && (
               <div
                 className={`
-      fixed inset-0 z-50 flex items-center justify-center
-      bg-black/40
-      transition-opacity duration-200
-      ${isClosing ? "opacity-0" : "opacity-100"}
-    `}
-                onClick={closeScheduler} // 👈 outside click
+                  fixed inset-0 z-50 flex items-center justify-center
+                  bg-black/40
+                  transition-opacity duration-200
+                  ${isClosing ? "opacity-0" : "opacity-100"}
+                `}
+                onClick={closeScheduler}
               >
                 <Card
                   className={`
-        w-full max-w-lg
-        transform transition-all duration-200
-        ${isClosing
-                      ? "scale-95 opacity-0"
-                      : "scale-100 opacity-100"}
-      `}
-                  onClick={(e) => e.stopPropagation()} // 👈 prevent close inside
+                    w-full max-w-lg
+                    transform transition-all duration-200
+                    ${
+                      isClosing
+                        ? "scale-95 opacity-0"
+                        : "scale-100 opacity-100"
+                    }
+                  `}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <CardHeader>
-                    <CardTitle>
-                      Schedule Post — {selectedDate}
-                    </CardTitle>
+                    <CardTitle>Schedule Post — {selectedDate}</CardTitle>
                   </CardHeader>
 
                   <CardContent className="space-y-4">
@@ -608,11 +642,15 @@ function Dashboard() {
                     <div>
                       <label className="text-sm font-medium">Client</label>
                       <div className="flex gap-2 flex-wrap">
-                        {clients.map(client => (
+                        {clients.map((client) => (
                           <Button
                             key={client.id}
                             size="sm"
-                            variant={selectedClient?.id === client.id ? "default" : "outline"}
+                            variant={
+                              selectedClient?.id === client.id
+                                ? "default"
+                                : "outline"
+                            }
                             onClick={() => setSelectedClient(client)}
                           >
                             {client.name}
@@ -641,14 +679,11 @@ function Dashboard() {
                         onChange={(e) =>
                           setNewPost({
                             ...newPost,
-                            file: e.target.files?.[0] || null
+                            file: e.target.files?.[0] || null,
                           })
                         }
                       />
-
-
                     </div>
-
 
                     {/* Time */}
                     <Input
@@ -661,11 +696,15 @@ function Dashboard() {
 
                     {/* Platforms */}
                     <div className="flex gap-2 flex-wrap">
-                      {Object.keys(platformIcons).map(platform => (
+                      {Object.keys(platformIcons).map((platform) => (
                         <Button
                           key={platform}
                           size="sm"
-                          variant={newPost.platforms.includes(platform) ? "default" : "outline"}
+                          variant={
+                            newPost.platforms.includes(platform)
+                              ? "default"
+                              : "outline"
+                          }
                           onClick={() => togglePlatform(platform)}
                         >
                           {platformIcons[platform]} {platform}
@@ -682,25 +721,24 @@ function Dashboard() {
                         variant="outline"
                         onClick={() => {
                           setNewPost({
-                            content: '',
-                            date: '',
-                            time: '',
+                            content: "",
+                            date: "",
+                            time: "",
                             platforms: [],
-                            file: null
+                            file: null,
                           });
                           setIsSchedulerOpen(false);
                         }}
                       >
                         Cancel
                       </Button>
-
                     </div>
                   </CardContent>
                 </Card>
               </div>
             )}
 
-
+            {/* Month navigation */}
             <div className="flex items-center justify-between mb-4">
               <Button variant="outline" size="sm" onClick={goToPrevMonth}>
                 ←
@@ -709,7 +747,7 @@ function Dashboard() {
               <h2 className="text-lg font-semibold">
                 {calendarDate.toLocaleString("en-US", {
                   month: "long",
-                  year: "numeric"
+                  year: "numeric",
                 })}
               </h2>
 
@@ -718,29 +756,27 @@ function Dashboard() {
               </Button>
             </div>
 
-
-
-
-
+            {/* Calendar */}
             <DndContext onDragEnd={handleDragEnd}>
               <div
                 key={calendarDate.toISOString()}
                 className={`transition-all duration-300 ease-in-out
-    ${monthDirection === "next"
-                    ? "animate-slide-left"
-                    : "animate-slide-right"}
-  `}
+                  ${
+                    monthDirection === "next"
+                      ? "animate-slide-left"
+                      : "animate-slide-right"
+                  }
+                `}
               >
                 <MonthCalendar
                   posts={filteredPosts}
                   calendarDate={calendarDate}
                   onDateClick={(date) => {
                     setSelectedDate(date);
-
-                    setNewPost(prev => ({
+                    setNewPost((prev) => ({
                       ...prev,
                       date,
-                      time: prev.time || "09:00"
+                      time: prev.time || "09:00",
                     }));
 
                     if (!selectedClient && clients.length === 1) {
@@ -749,444 +785,452 @@ function Dashboard() {
 
                     setIsSchedulerOpen(true);
                   }}
-
                 />
               </div>
             </DndContext>
 
-
-            {/* Posts Calendar View */}
-            <div>
-              <h2 className="text-xl font-semibold mb-4">
-                {selectedClient ? `${selectedClient.name}'s Schedule` : 'All Scheduled Posts'}
-              </h2>
-
-              {filteredPosts.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">No posts scheduled yet</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                // <Card>
-                //   <CardContent className="p-0 overflow-x-auto">
-                //     <table className="w-full text-sm">
-                //       <thead className="bg-gray-50 border-b">
-                //         <tr>
-                //           <th className="px-4 py-3 text-left font-medium text-gray-600">Date</th>
-                //           <th className="px-4 py-3 text-left font-medium text-gray-600">Time</th>
-                //           <th className="px-4 py-3 text-left font-medium text-gray-600">Client</th>
-                //           <th className="px-4 py-3 text-left font-medium text-gray-600">Platforms</th>
-                //           <th className="px-4 py-3 text-left font-medium text-gray-600">Content</th>
-                //           <th className="px-4 py-3 text-right font-medium text-gray-600">Actions</th>
-                //         </tr>
-                //       </thead>
-
-                //       <tbody>
-                //         {filteredPosts
-                //           .sort(
-                //             (a, b) =>
-                //               `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)
-                //           )
-                //           .map(post => (
-                //             <tr
-                //               key={post.id}
-                //               className="border-b last:border-b-0 hover:bg-gray-50 transition"
-                //             >
-                //               {/* Date */}
-                //               <td className="px-4 py-3 whitespace-nowrap">
-                //                 {new Date(post.date + "T00:00:00").toLocaleDateString("en-US", {
-                //                   month: "short",
-                //                   day: "numeric",
-                //                   year: "numeric"
-                //                 })}
-                //               </td>
-
-                //               {/* Time */}
-                //               <td className="px-4 py-3 font-medium text-gray-700">
-                //                 {post.time}
-                //               </td>
-
-                //               {/* Client */}
-                //               <td className="px-4 py-3">
-                //                 <Badge className="bg-gradient-to-r from-blue-500 to-purple-600">
-                //                   {post.clientName}
-                //                 </Badge>
-                //               </td>
-
-                //               {/* Platforms */}
-                // <td className="px-4 py-3">
-                //   <div className="flex gap-1">
-                //     {post.platforms.map(platform => (
-                //       <div
-                //         key={platform}
-                //         className={`${platformColors[platform]} p-1.5 rounded text-white`}
-                //         title={platform}
-                //       >
-                //         {platformIcons[platform]}
-                //       </div>
-                //     ))}
-                //   </div>
-                // </td>
-
-                //               {/* Content */}
-                //               <td className="px-4 py-3 max-w-md truncate text-gray-700">
-                //                 {post.content}
-                //               </td>
-
-                //               {/* Actions */}
-                //               <td className="px-4 py-3 text-right">
-                //                 <Button
-                //                   size="sm"
-                //                   variant="ghost"
-                //                   onClick={() => deletePost(post.id)}
-                //                   className="hover:bg-red-50"
-                //                 >
-                //                   <Trash2 className="w-4 h-4 text-red-500" />
-                //                 </Button>
-                //               </td>
-                //             </tr>
-                //           ))}
-                //       </tbody>
-                //     </table>
-                //   </CardContent>
-                // </Card>
-
-                <Card>
-                  <CardContent className="p-0 overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 border-b">
-                        <tr>
-                          <th className="px-4 py-3 text-left">Client</th>
-                          <th className="px-4 py-3 text-left">Date</th>
-                          <th className="px-4 py-3 text-left">Time</th>
-                          <th className="px-4 py-3 text-left">Content</th>
-                          <th className="px-4 py-3 text-left">Platforms</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {paginatedScheduledPosts.map(post => (
-                          <tr key={post.id} className="border-b hover:bg-gray-50">
-                            <td className="px-4 py-3 font-medium">{post.clientName}</td>
-                            <td className="px-4 py-3">{post.date}</td>
-                            <td className="px-4 py-3">{post.time}</td>
-                            <td className="px-4 py-3 truncate max-w-sm">
-                              {post.caption}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex gap-1">
-                                {post.platforms.map(platform => (
-                                  <div
-                                    key={platform}
-                                    className={`${platformColors[platform]} p-1.5 rounded text-white`}
-                                    title={platform}
-                                  >
-                                    {platformIcons[platform]}
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-
-                    <TablePagination
-                      page={schedPage}
-                      totalPages={schedTotalPages}
-                      pageSize={schedPageSize}
-                      setPage={setSchedPage}
-                      setPageSize={setSchedPageSize}
-                    />
-                  </CardContent>
-                </Card>
+            {/* Scheduled posts table */}
+              {/* Posts Calendar View */}
+            <div>
+              <h2 className="text-xl font-semibold mb-4">
+                {selectedClient ? `${selectedClient.name}'s Schedule` : 'All Scheduled Posts'}
+              </h2>
 
 
-              )}
-            </div>
+              {filteredPosts.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">No posts scheduled yet</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                // <Card>
+                //   <CardContent className="p-0 overflow-x-auto">
+                //     <table className="w-full text-sm">
+                //       <thead className="bg-gray-50 border-b">
+                //         <tr>
+                //           <th className="px-4 py-3 text-left font-medium text-gray-600">Date</th>
+                //           <th className="px-4 py-3 text-left font-medium text-gray-600">Time</th>
+                //           <th className="px-4 py-3 text-left font-medium text-gray-600">Client</th>
+                //           <th className="px-4 py-3 text-left font-medium text-gray-600">Platforms</th>
+                //           <th className="px-4 py-3 text-left font-medium text-gray-600">Content</th>
+                //           <th className="px-4 py-3 text-right font-medium text-gray-600">Actions</th>
+                //         </tr>
+                //       </thead>
 
 
-            {/* ================================
-    🚀 QUEUED POSTS (Worker Pending)
-   ================================ */}
-            <div className="mt-10">
-              <h2 className="text-xl font-semibold mb-3">
-                Queued Posts (Waiting for Worker)
-              </h2>
-
-              {queuedPosts.length === 0 ? (
-                <p className="text-gray-500">No queued posts found.</p>
-              ) : (
-                // <Card>
-                //   <CardContent className="p-0 overflow-x-auto">
-
-
-                //     <table className="w-full text-sm">
-                //       <thead className="bg-gray-50 border-b">
-                //         <tr>
-                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                //             Platform
-                //           </th>
-                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                //             Caption
-                //           </th>
-                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                //             Scheduled At
-                //           </th>
-                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                //             Status
-                //           </th>
-                //         </tr>
-                //       </thead>
-                //       <tbody>
-                //         {paginatedData.map(q => (
-                //           <tr key={q.id} className="border-b">
-                //             <td className="px-4 py-3">{q.platform.toUpperCase()}</td>
-                //             <td className="px-4 py-3">{q.caption}</td>
-                // <td className="px-4 py-3 text-gray-600">
-                //   {new Date(q.scheduled_at).toLocaleString()}
-                // </td>
-                //         <td className="px-4 py-3">
-                //           <span
-                //             className={`
-                //   inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                //   ${q.status === "queued" && "bg-yellow-100 text-yellow-800"}
-                //   ${q.status === "processing" && "bg-blue-100 text-blue-800"}
-                //   ${q.status === "posted" && "bg-green-100 text-green-800"}
-                //   ${q.status === "failed" && "bg-red-100 text-red-800"}
-                // `}
-                //           >
-                //             {q.status}
-                //           </span>
-                //         </td>
-                //           </tr>
-                //         ))}
-                //       </tbody>
+                //       <tbody>
+                //         {filteredPosts
+                //           .sort(
+                //             (a, b) =>
+                //               `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)
+                //           )
+                //           .map(post => (
+                //             <tr
+                //               key={post.id}
+                //               className="border-b last:border-b-0 hover:bg-gray-50 transition"
+                //             >
+                //               {/* Date */}
+                //               <td className="px-4 py-3 whitespace-nowrap">
+                //                 {new Date(post.date + "T00:00:00").toLocaleDateString("en-US", {
+                //                   month: "short",
+                //                   day: "numeric",
+                //                   year: "numeric"
+                //                 })}
+                //               </td>
 
 
-                //     </table>
+                //               {/* Time */}
+                //               <td className="px-4 py-3 font-medium text-gray-700">
+                //                 {post.time}
+                //               </td>
 
-                //     <TablePagination
-                //       page={page}
-                //       totalPages={totalPages}
-                //       pageSize={pageSize}
-                //       setPage={setPage}
-                //       setPageSize={setPageSize}
-                //     />
 
-                //   </CardContent>
-                // </Card>
+                //               {/* Client */}
+                //               <td className="px-4 py-3">
+                //                 <Badge className="bg-gradient-to-r from-blue-500 to-purple-600">
+                //                   {post.clientName}
+                //                 </Badge>
+                //               </td>
 
-                <Card>
-                  <CardContent className="p-0 overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 border-b">
-                        <tr>
-                          <th className="px-4 py-3 text-left">Platform</th>
-                          <th className="px-4 py-3 text-left">Caption</th>
-                          <th className="px-4 py-3 text-left">Scheduled At</th>
-                          <th className="px-4 py-3 text-left">Status</th>
-                        </tr>
-                      </thead>
 
-                      <tbody>
-                        {paginatedQueuedPosts.map(q => (
-                          <tr key={q.id} className="border-b hover:bg-gray-50">
-                            <td className="px-4 py-3 font-medium">
-                              {q.platform.toUpperCase()}
-                            </td>
-                            <td className="px-4 py-3 truncate max-w-md">
-                              {q.title}
-                            </td>
-                           
-                            <td className="px-4 py-3">
-                              <span
-                                className={`
-                      inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                      ${q.status === "queued" && "bg-yellow-100 text-yellow-800"}
-                      ${q.status === "processing" && "bg-blue-100 text-blue-800"}
-                      ${q.status === "posted" && "bg-green-100 text-green-800"}
-                      ${q.status === "failed" && "bg-red-100 text-red-800"}
-                    `}
-                              >
-                                {q.status}
-                              </span>
-                            </td>
+                //               {/* Platforms */}
+                // <td className="px-4 py-3">
+                //   <div className="flex gap-1">
+                //     {post.platforms.map(platform => (
+                //       <div
+                //         key={platform}
+                //         className={`${platformColors[platform]} p-1.5 rounded text-white`}
+                //         title={platform}
+                //       >
+                //         {platformIcons[platform]}
+                //       </div>
+                //     ))}
+                //   </div>
+                // </td>
 
-                             <td className="px-4 py-3 text-gray-600">
-                              {new Date(q.scheduled_at).toLocaleString()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
 
-                    <TablePagination
-                      page={queuedPage}
-                      totalPages={queuedTotalPages}
-                      pageSize={queuedPageSize}
-                      setPage={setQueuedPage}
-                      setPageSize={setQueuedPageSize}
-                    />
-                  </CardContent>
-                </Card>
+                //               {/* Content */}
+                //               <td className="px-4 py-3 max-w-md truncate text-gray-700">
+                //                 {post.content}
+                //               </td>
 
-              )}
-            </div>
 
-            {/* ================================
-    🟢 PUBLISHED POSTS HISTORY
-   ================================ */}
-            <div className="mt-10">
-              <h2 className="text-xl font-semibold mb-3">
-                Published Posts (History)
-              </h2>
+                //               {/* Actions */}
+                //               <td className="px-4 py-3 text-right">
+                //                 <Button
+                //                   size="sm"
+                //                   variant="ghost"
+                //                   onClick={() => deletePost(post.id)}
+                //                   className="hover:bg-red-50"
+                //                 >
+                //                   <Trash2 className="w-4 h-4 text-red-500" />
+                //                 </Button>
+                //               </td>
+                //             </tr>
+                //           ))}
+                //       </tbody>
+                //     </table>
+                //   </CardContent>
+                // </Card>
 
-              {publishedPosts.length === 0 ? (
-                <p className="text-gray-500">No published posts yet.</p>
-              ) : (
-                // <Card>
-                //   <CardContent className="p-0 overflow-x-auto">
-                //     <table className="w-full text-sm">
-                //       <thead className="bg-gray-50 border-b">
-                //         <tr>
-                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                //             Platform
-                //           </th>
-                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                //             Caption
-                //           </th>
-                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                //             Status
-                //           </th>
-                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                //             Posted At
-                //           </th>
-                //         </tr>
-                //       </thead>
 
-                //       <tbody>
-                //         {publishedPosts.map(p => (
-                //           <tr
-                //             key={p.id}
-                //             className="border-b last:border-b-0 hover:bg-gray-50 transition"
-                //           >
-                //             {/* Platform */}
-                //             <td className="px-4 py-3 font-medium">
-                //               {p.platform.toUpperCase()}
-                //             </td>
+                <Card>
+                  <CardContent className="p-0 overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b">
+                        <tr>
+                          <th className="px-4 py-3 text-left">Client</th>
+                          <th className="px-4 py-3 text-left">Date</th>
+                          <th className="px-4 py-3 text-left">Time</th>
+                          <th className="px-4 py-3 text-left">Content</th>
+                          <th className="px-4 py-3 text-left">Platforms</th>
+                        </tr>
+                      </thead>
 
-                //             {/* Caption */}
-                //             <td className="px-4 py-3 text-gray-700 max-w-md truncate">
-                //               {p.caption || "-"}
-                //             </td>
 
-                //             {/* Status */}
-                //             <td className="px-4 py-3">
-                //               <span
-                //                 className={`
-                //       inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                //       ${p.status === "success" && "bg-green-100 text-green-800"}
-                //       ${p.status === "failed" && "bg-red-100 text-red-800"}
-                //     `}
-                //               >
-                //                 {p.status}
-                //               </span>
-                //             </td>
+                      <tbody>
+                        {paginatedScheduledPosts.map(post => (
+                          <tr key={post.id} className="border-b hover:bg-gray-50">
+                            <td className="px-4 py-3 font-medium">{post.clientName}</td>
+                            <td className="px-4 py-3">{post.date}</td>
+                            <td className="px-4 py-3">{post.time}</td>
+                            <td className="px-4 py-3 truncate max-w-sm">
+                              {post.caption}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex gap-1">
+                                {post.platforms.map(platform => (
+                                  <div
+                                    key={platform}
+                                    className={`${platformColors[platform]} p-1.5 rounded text-white`}
+                                    title={platform}
+                                  >
+                                    {platformIcons[platform]}
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
 
-                //             {/* Created At */}
-                //             <td className="px-4 py-3 text-gray-600">
-                //               {new Date(p.created_at).toLocaleString()}
-                //             </td>
-                //           </tr>
-                //         ))}
-                //       </tbody>
-                //     </table>
-                //   </CardContent>
-                // </Card>
 
-                <Card>
-                  <CardContent className="p-0 overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 border-b">
-                        <tr>
-                          <th className="px-4 py-3 text-left">Platform</th>
-                          <th className="px-4 py-3 text-left">Caption</th>
-                          <th className="px-4 py-3 text-left">Status</th>
-                          <th className="px-4 py-3 text-left">Posted At</th>
-                        </tr>
-                      </thead>
+                    <TablePagination
+                      page={schedPage}
+                      totalPages={schedTotalPages}
+                      pageSize={schedPageSize}
+                      setPage={setSchedPage}
+                      setPageSize={setSchedPageSize}
+                    />
+                  </CardContent>
+                </Card>
 
-                      <tbody>
-                        {paginatedPublishedPosts.map(p => (
-                          <tr key={p.id} className="border-b hover:bg-gray-50">
-                            <td className="px-4 py-3 font-medium">
-                              {p.platform.toUpperCase()}
-                            </td>
-                            <td className="px-4 py-3 truncate max-w-md">
-                              {p.caption}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span
-                                className={`px-2 py-1 rounded text-xs
-                  ${p.status === "success"
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-red-100 text-red-700"}
-                `}
-                              >
-                                {p.status}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              {new Date(p.created_at).toLocaleString()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
 
-                    <TablePagination
-                      page={pubPage}
-                      totalPages={pubTotalPages}
-                      pageSize={pubPageSize}
-                      setPage={setPubPage}
-                      setPageSize={setPubPageSize}
-                    />
-                  </CardContent>
-                </Card>
 
-              )}
-            </div>
+              )}
+            </div>
+                     {/* ================================
+    🚀 QUEUED POSTS (Worker Pending)
+   ================================ */}
+            <div className="mt-10">
+              <h2 className="text-xl font-semibold mb-3">
+                Queued Posts (Waiting for Worker)
+              </h2>
 
+
+              {queuedPosts.length === 0 ? (
+                <p className="text-gray-500">No queued posts found.</p>
+              ) : (
+                // <Card>
+                //   <CardContent className="p-0 overflow-x-auto">
+
+
+
+                //     <table className="w-full text-sm">
+                //       <thead className="bg-gray-50 border-b">
+                //         <tr>
+                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
+                //             Platform
+                //           </th>
+                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
+                //             Caption
+                //           </th>
+                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
+                //             Scheduled At
+                //           </th>
+                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
+                //             Status
+                //           </th>
+                //         </tr>
+                //       </thead>
+                //       <tbody>
+                //         {paginatedData.map(q => (
+                //           <tr key={q.id} className="border-b">
+                //             <td className="px-4 py-3">{q.platform.toUpperCase()}</td>
+                //             <td className="px-4 py-3">{q.caption}</td>
+                // <td className="px-4 py-3 text-gray-600">
+                //   {new Date(q.scheduled_at).toLocaleString()}
+                // </td>
+                //         <td className="px-4 py-3">
+                //           <span
+                //             className={`
+                //   inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                //   ${q.status === "queued" && "bg-yellow-100 text-yellow-800"}
+                //   ${q.status === "processing" && "bg-blue-100 text-blue-800"}
+                //   ${q.status === "posted" && "bg-green-100 text-green-800"}
+                //   ${q.status === "failed" && "bg-red-100 text-red-800"}
+                // `}
+                //           >
+                //             {q.status}
+                //           </span>
+                //         </td>
+                //           </tr>
+                //         ))}
+                //       </tbody>
+
+
+
+                //     </table>
+
+
+                //     <TablePagination
+                //       page={page}
+                //       totalPages={totalPages}
+                //       pageSize={pageSize}
+                //       setPage={setPage}
+                //       setPageSize={setPageSize}
+                //     />
+
+
+                //   </CardContent>
+                // </Card>
+
+
+                <Card>
+                  <CardContent className="p-0 overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b">
+                        <tr>
+                          <th className="px-4 py-3 text-left">Platform</th>
+                          <th className="px-4 py-3 text-left">Caption</th>
+                          <th className="px-4 py-3 text-left">Scheduled At</th>
+                          <th className="px-4 py-3 text-left">Status</th>
+                        </tr>
+                      </thead>
+
+
+                      <tbody>
+                        {paginatedQueuedPosts.map(q => (
+                          <tr key={q.id} className="border-b hover:bg-gray-50">
+                            <td className="px-4 py-3 font-medium">
+                              {q.platform.toUpperCase()}
+                            </td>
+                            <td className="px-4 py-3 truncate max-w-md">
+                              {q.title}
+                            </td>
+                           
+                            <td className="px-4 py-3">
+                              <span
+                                className={`
+                      inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                      ${q.status === "queued" && "bg-yellow-100 text-yellow-800"}
+                      ${q.status === "processing" && "bg-blue-100 text-blue-800"}
+                      ${q.status === "posted" && "bg-green-100 text-green-800"}
+                      ${q.status === "failed" && "bg-red-100 text-red-800"}
+                    `}
+                              >
+                                {q.status}
+                              </span>
+                            </td>
+
+
+                             <td className="px-4 py-3 text-gray-600">
+                              {new Date(q.scheduled_at).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+
+                    <TablePagination
+                      page={queuedPage}
+                      totalPages={queuedTotalPages}
+                      pageSize={queuedPageSize}
+                      setPage={setQueuedPage}
+                      setPageSize={setQueuedPageSize}
+                    />
+                  </CardContent>
+                </Card>
+
+
+              )}
+            </div>
+
+
+            {/* ================================
+    🟢 PUBLISHED POSTS HISTORY
+   ================================ */}
+            <div className="mt-10">
+              <h2 className="text-xl font-semibold mb-3">
+                Published Posts (History)
+              </h2>
+
+
+              {publishedPosts.length === 0 ? (
+                <p className="text-gray-500">No published posts yet.</p>
+              ) : (
+                // <Card>
+                //   <CardContent className="p-0 overflow-x-auto">
+                //     <table className="w-full text-sm">
+                //       <thead className="bg-gray-50 border-b">
+                //         <tr>
+                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
+                //             Platform
+                //           </th>
+                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
+                //             Caption
+                //           </th>
+                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
+                //             Status
+                //           </th>
+                //           <th className="px-4 py-3 text-left font-medium text-gray-600">
+                //             Posted At
+                //           </th>
+                //         </tr>
+                //       </thead>
+
+
+                //       <tbody>
+                //         {publishedPosts.map(p => (
+                //           <tr
+                //             key={p.id}
+                //             className="border-b last:border-b-0 hover:bg-gray-50 transition"
+                //           >
+                //             {/* Platform */}
+                //             <td className="px-4 py-3 font-medium">
+                //               {p.platform.toUpperCase()}
+                //             </td>
+
+
+                //             {/* Caption */}
+                //             <td className="px-4 py-3 text-gray-700 max-w-md truncate">
+                //               {p.caption || "-"}
+                //             </td>
+
+
+                //             {/* Status */}
+                //             <td className="px-4 py-3">
+                //               <span
+                //                 className={`
+                //       inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                //       ${p.status === "success" && "bg-green-100 text-green-800"}
+                //       ${p.status === "failed" && "bg-red-100 text-red-800"}
+                //     `}
+                //               >
+                //                 {p.status}
+                //               </span>
+                //             </td>
+
+
+                //             {/* Created At */}
+                //             <td className="px-4 py-3 text-gray-600">
+                //               {new Date(p.created_at).toLocaleString()}
+                //             </td>
+                //           </tr>
+                //         ))}
+                //       </tbody>
+                //     </table>
+                //   </CardContent>
+                // </Card>
+
+
+                <Card>
+                  <CardContent className="p-0 overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b">
+                        <tr>
+                          <th className="px-4 py-3 text-left">Platform</th>
+                          <th className="px-4 py-3 text-left">Caption</th>
+                          <th className="px-4 py-3 text-left">Status</th>
+                          <th className="px-4 py-3 text-left">Posted At</th>
+                        </tr>
+                      </thead>
+
+
+                      <tbody>
+                        {paginatedPublishedPosts.map(p => (
+                          <tr key={p.id} className="border-b hover:bg-gray-50">
+                            <td className="px-4 py-3 font-medium">
+                              {p.platform.toUpperCase()}
+                            </td>
+                            <td className="px-4 py-3 truncate max-w-md">
+                              {p.caption}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={`px-2 py-1 rounded text-xs
+                  ${p.status === "success"
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-red-100 text-red-700"}
+                `}
+                              >
+                                {p.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              {new Date(p.created_at).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+
+                    <TablePagination
+                      page={pubPage}
+                      totalPages={pubTotalPages}
+                      pageSize={pubPageSize}
+                      setPage={setPubPage}
+                      setPageSize={setPubPageSize}
+                    />
+                  </CardContent>
+                </Card>
+
+
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
-  )
-  
-//   return (
-//   <div className="flex min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-    
-//     {/* Sidebar */}
-//     <Sidebar />
+  </div>
+);
 
-//     {/* Main Content */}
-//     <div className="flex-1 ml-64">
-//       {/* existing dashboard code yahin rahega */}
-      
-//       <header className="bg-white border-b shadow-sm sticky top-0 z-40">
-//         ...
-//       </header>
 
-//       <div className="max-w-7xl mx-auto px-4 py-8">
-//         ...
-//       </div>
-
-//     </div>
-//   </div>
-// )
 
 
 

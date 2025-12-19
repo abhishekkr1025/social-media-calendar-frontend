@@ -1,91 +1,60 @@
-// Sidebar.jsx
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card.jsx";
 import { Button } from "@/components/ui/button.jsx";
-import { Input } from "@/components/ui/input.jsx";
-import { Plus, Trash2 } from "lucide-react";
+import { User, Menu } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-export default function Sidebar({
-  clients,
-  posts,
-  selectedClient,
-  setSelectedClient,
-  newClient,
-  setNewClient,
-  showAddClient,
-  setShowAddClient,
-  addClient,
-  deleteClient,
-}) {
+export default function Sidebar({ isCollapsed, toggleSidebar }) {
+  const navigate = useNavigate();
+
   return (
-    <div className="w-64 fixed left-0 top-0 h-full bg-white border-r shadow-sm p-4 overflow-y-auto">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Clients</CardTitle>
-            <Button
-              size="sm"
-              onClick={() => setShowAddClient(true)}
-              className="gap-1"
-            >
-              <Plus className="w-4 h-4" />
-              Add
-            </Button>
-          </div>
-        </CardHeader>
+    <div
+      className={`fixed left-0 top-0 h-full bg-white border-r shadow-sm
+        transition-all duration-300
+        ${isCollapsed ? "w-16" : "w-64"}
+      `}
+    >
+      {/* 🔹 MENU BUTTON (always visible) */}
+      <div className="flex items-center justify-center h-14 border-b">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleSidebar}
+        >
+          <Menu className="w-6 h-6" />
+        </Button>
+      </div>
 
-        <CardContent className="space-y-2">
-          {showAddClient && (
-            <div className="flex gap-2 mb-3 animate-in fade-in slide-in-from-top-2 duration-200">
-              <Input
-                placeholder="Client name"
-                value={newClient}
-                onChange={(e) => setNewClient(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && addClient()}
-              />
-              <Button size="sm" onClick={addClient}>
-                Add
-              </Button>
-            </div>
-          )}
-
+      {/* 🔹 COLLAPSED VIEW */}
+      {isCollapsed && (
+        <div className="flex flex-col items-center mt-6">
           <Button
-            variant={selectedClient === null ? "default" : "ghost"}
-            className="w-full justify-start"
-            onClick={() => setSelectedClient(null)}
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/client-details")}
           >
-            All Clients ({posts.length})
+            <User className="w-6 h-6" />
           </Button>
+        </div>
+      )}
 
-          {clients.map((client) => (
-            <div key={client.id} className="flex items-center gap-2 group">
-              <Button
-                variant={
-                  selectedClient?.id === client.id ? "default" : "ghost"
-                }
-                className="flex-1 justify-start"
-                onClick={() => setSelectedClient(client)}
-              >
-                {client.name} (
-                {posts.filter((p) => p.clientId === client.id).length})
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => deleteClient(client.id)}
-              >
-                <Trash2 className="w-4 h-4 text-red-500" />
-              </Button>
-            </div>
-          ))}
+      {/* 🔹 EXPANDED VIEW */}
+      {!isCollapsed && (
+        <Card className="m-4">
+          <CardHeader>
+            <CardTitle className="text-lg">Navigation</CardTitle>
+          </CardHeader>
 
-          {clients.length === 0 && !showAddClient && (
-            <p className="text-sm text-gray-500 text-center py-4">
-              No clients yet. Add one to get started!
-            </p>
-          )}
-        </CardContent>
-      </Card>
+          <CardContent>
+            <Button
+              className="w-full justify-start gap-2"
+              onClick={() => navigate("/client-details")}
+            >
+              <User className="w-4 h-4" />
+              Client Details
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
