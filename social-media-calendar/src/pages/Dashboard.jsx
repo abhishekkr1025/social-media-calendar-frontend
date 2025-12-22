@@ -56,7 +56,7 @@ function Dashboard() {
     content: "",
     excerpt: "",
     date: "",
-    time: "09:00",
+    time: "",
     file: null,
     wpStatus: "publish"
   });
@@ -873,13 +873,24 @@ function Dashboard() {
                     )}
 
                     {/* ⏰ TIME */}
-                    <Input
-                      type="time"
-                      value={wpPost.time}
-                      onChange={(e) =>
-                        setWpPost({ ...wpPost, time: e.target.value })
-                      }
-                    />
+                    {schedulerType === "social" ? (
+                      <Input
+                        type="time"
+                        value={newPost.time}
+                        onChange={(e) =>
+                          setNewPost({ ...newPost, time: e.target.value })
+                        }
+                      />
+                    ) : (
+                      <Input
+                        type="time"
+                        value={wpPost.time}
+                        onChange={(e) =>
+                          setWpPost({ ...wpPost, time: e.target.value })
+                        }
+                      />
+                    )}
+
 
                     {/* 🔘 ACTIONS */}
                     <div className="flex gap-2">
@@ -949,14 +960,15 @@ function Dashboard() {
                     setNewPost(prev => ({
                       ...prev,
                       date,
-                      time: prev.time || "09:00"
+                      time: prev.time === "" ? "09:00" : prev.time
                     }));
 
                     // ✅ WordPress post (THIS WAS MISSING)
                     setWpPost(prev => ({
                       ...prev,
                       date,
-                      time: prev.time || "09:00"
+                      time: prev.time === "" ? "09:00" : prev.time
+
                     }));
 
                     if (!selectedClient && clients.length === 1) {
