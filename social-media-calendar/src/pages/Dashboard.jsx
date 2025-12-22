@@ -14,6 +14,7 @@ import { DndContext } from "@dnd-kit/core";
 import { usePagination } from '@/services/usePagination'
 import TablePagination from "@/components/TablePagination";
 import WordPressSchedulerModal from '@/components/WordPressSchedulerModal'
+import { showSuccess } from '@/components/Toast'
 
 
 
@@ -407,6 +408,8 @@ function Dashboard() {
         }
       });
 
+     
+
       if (!response.ok) {
         throw new Error("Failed to delete post");
       }
@@ -418,7 +421,8 @@ function Dashboard() {
       setPosts(posts.filter(post => post.id !== postId));
 
       // Optional: Show success message
-      alert("Post deleted successfully!");
+       showSuccess("Post deleted successfully!")
+      
 
     } catch (error) {
       console.error("❌ Error deleting post:", error);

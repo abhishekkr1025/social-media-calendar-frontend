@@ -3,9 +3,11 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Onboarding from "./pages/Onboarding.jsx";
 import ConnectSuccess from "./components/ConnectSuccess.jsx";
 import ConnectToPlatforms from "./pages/ConnectToPlatform.jsx";
+import { Toaster } from "sonner";
 
 export default function App() {
   return (
+    <>
     <Router>
       <Routes>
         <Route path="/" element={<Dashboard />} />
@@ -14,5 +16,8 @@ export default function App() {
         <Route path="/connect-platform" element={<ConnectToPlatforms />} />
       </Routes>
     </Router>
+    <Toaster position="top-right" richColors closeButton/>
+    </>
+    
   );
 }
