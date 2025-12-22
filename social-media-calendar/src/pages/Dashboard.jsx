@@ -1091,6 +1091,8 @@ function Dashboard() {
                           <th className="px-4 py-3 text-left">Time</th>
                           <th className="px-4 py-3 text-left">Content</th>
                           <th className="px-4 py-3 text-left">Platforms</th>
+                          <th className="px-4 py-3 text-left">Actions</th>
+
                         </tr>
                       </thead>
 
@@ -1116,6 +1118,20 @@ function Dashboard() {
                                 ))}
                               </div>
                             </td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => {
+                                  if (confirm("Are you sure you want to delete this post?")) {
+                                    deletePost(post.id);
+                                  }
+                                }}
+                                className="flex items-center gap-1 text-red-600 hover:text-red-800"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                              </button>
+                            </td>
+
                           </tr>
                         ))}
                       </tbody>
