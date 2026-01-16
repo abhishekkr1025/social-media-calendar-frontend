@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+
+
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -110,6 +113,20 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,0.3);
+  border-radius: 3px;
+}
+
+
+
+
+
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -118,6 +135,16 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer base {
+  body {
+    @apply bg-background text-foreground overscroll-none;
+  }
+}
+
+
+
+
 
 @keyframes slideLeft {
   from {
