@@ -188,8 +188,7 @@ export default function WordPressSites() {
                             {filteredSites.map(site => (
                                 <tr
                                     key={site.id}
-                                    className="border-b hover:bg-gray-50 cursor-pointer"
-                                    onClick={() => navigate(`/wordpress-sites/${site.id}/categories`)}
+                                    className="border-b hover:bg-gray-50"
                                 >
 
                                     <td className="px-4 py-2">
@@ -244,6 +243,15 @@ export default function WordPressSites() {
                                             onClick={() => syncCategories(site.id)}
                                         >
                                             {syncingId === site.id ? "Syncing..." : "Sync Categories"}
+                                        </button>
+
+                                        <button
+                                            className="text-indigo-600 hover:underline"
+                                            onClick={() =>
+                                                navigate(`/wordpress-sites/${site.id}/categories`)
+                                            }
+                                        >
+                                            View
                                         </button>
 
 
