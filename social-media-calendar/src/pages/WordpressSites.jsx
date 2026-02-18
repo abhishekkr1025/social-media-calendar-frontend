@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function WordPressSites() {
     const [sites, setSites] = useState([]);
@@ -16,6 +17,9 @@ export default function WordPressSites() {
         default_media_id: ""
     });
     const [editSite, setEditSite] = useState(null);
+    const [syncingId, setSyncingId] = useState(null);
+    const navigate = useNavigate();
+
 
 
 
@@ -97,6 +101,23 @@ export default function WordPressSites() {
         });
     }
 
+    async function syncCategories(id) {
+        setSyncingId(id);
+        try {
+            const res = await fetch(
+                `${BASE_URL}/api/wordpress-sites/${id}/sync-categories`,
+                { method: "POST" }
+            );
+            const data = await res.json();
+            alert(data.success ? "Synced!" : "Failed!");
+        } catch (err) {
+            alert("Error syncing");
+        } finally {
+            setSyncingId(null);
+        }
+    }
+
+
 
 
     const filteredSites =
@@ -159,6 +180,7 @@ export default function WordPressSites() {
                                 <th className="px-4 py-2 text-left">Connected On</th>
                                 <th className="px-4 py-2 text-left">Actions</th>
 
+
                             </tr>
                         </thead>
 
@@ -166,8 +188,10 @@ export default function WordPressSites() {
                             {filteredSites.map(site => (
                                 <tr
                                     key={site.id}
-                                    className="border-b hover:bg-gray-50"
+                                    className="border-b hover:bg-gray-50 cursor-pointer"
+                                    onClick={() => navigate(`/wordpress-sites/${site.id}/categories`)}
                                 >
+
                                     <td className="px-4 py-2">
                                         {site.client_name}
                                     </td>
@@ -213,6 +237,15 @@ export default function WordPressSites() {
                                         >
                                             Test
                                         </button>
+
+                                        <button
+                                            disabled={syncingId === site.id}
+                                            className="text-purple-600 hover:underline disabled:text-gray-400"
+                                            onClick={() => syncCategories(site.id)}
+                                        >
+                                            {syncingId === site.id ? "Syncing..." : "Sync Categories"}
+                                        </button>
+
 
                                         {/* <button
                                             className={`hover:underline ${site.is_default ? "text-yellow-600 font-semibold" : "text-gray-500"

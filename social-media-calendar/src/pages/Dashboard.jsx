@@ -43,6 +43,9 @@ function Dashboard() {
     const [isWpSchedulerOpen, setIsWpSchedulerOpen] = useState(false);
     const [schedulerType, setSchedulerType] = useState("social");
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [wpCategories, setWpCategories] = useState([]);
+    const [masterCategories, setMasterCategories] = useState([]);
+
 
     // "social" | "blog"
 
@@ -67,7 +70,8 @@ function Dashboard() {
         time: "",
         file: null,
         wpStatus: "publish",
-        language: ""
+        language: "",
+        master_category_id: ""
     });
 
 
@@ -81,18 +85,18 @@ function Dashboard() {
     } = usePagination(queuedPosts, 5);
 
     const BLOG_LANGUAGES = [
-  { label: "English", value: "English" },
-  { label: "Hindi", value: "Hindi" },
-  { label: "Tamil", value: "Tamil" },
-  { label: "Telugu", value: "Telugu" },
-  { label: "Marathi", value: "Marathi" },
-  { label: "Bengali", value: "Bengali" },
-  { label: "Gujarati", value: "Gujarati" }
-];
+        { label: "English", value: "English" },
+        { label: "Hindi", value: "Hindi" },
+        { label: "Tamil", value: "Tamil" },
+        { label: "Telugu", value: "Telugu" },
+        { label: "Marathi", value: "Marathi" },
+        { label: "Bengali", value: "Bengali" },
+        { label: "Gujarati", value: "Gujarati" }
+    ];
 
 
 
-    const BASE_URL =   "https://prod.panditjee.com";
+    const BASE_URL = "https://prod.panditjee.com";
 
     const fetchClients = async () => {
         try {
@@ -129,6 +133,26 @@ function Dashboard() {
         setPosts(formatted);
     }, [clients, rawPosts]);
 
+//     useEffect(() => {
+//   if (!selectedClient || !wpPost.language) return;
+
+//   fetch(
+//     `${BASE_URL}/api/master-categories/by-client-language?client_id=${selectedClient.id}&language=${wpPost.language}`
+//   )
+//     .then(res => res.json())
+//     .then(data => setWpCategories(data))
+//     .catch(err => console.error("Failed to load categories", err));
+
+// }, [selectedClient, wpPost.language]);
+
+useEffect(() => {
+  fetch(`${BASE_URL}/api/master-categories`)
+    .then(res => res.json())
+    .then(setMasterCategories);
+}, []);
+
+
+
 
     const scheduleWordPressPost = async () => {
         if (!selectedClient) {
@@ -156,6 +180,7 @@ function Dashboard() {
         formData.append("scheduled_at", scheduled_at);
         formData.append("status", "scheduled");
         formData.append("language", wpPost.language); // ✅ dynamic
+        formData.append("master_category_id",wpPost.master_category_id)
 
         if (wpPost.file) {
             formData.append("file", wpPost.file);
@@ -799,6 +824,30 @@ function Dashboard() {
                                                             ))}
                                                         </select>
                                                     </div>
+
+                                                    {/* 📂 CATEGORY */}
+                                                    <div>
+                                                        <label className="text-sm font-medium mb-1 block">
+                                                            Category
+                                                        </label>
+
+                                                        <select
+                                                            className="w-full border rounded-md px-3 py-2 text-sm"
+                                                            value={wpPost.master_category_id}
+                                                            onChange={(e) =>
+                                                                setWpPost({ ...wpPost, master_category_id: e.target.value })
+                                                            }
+                                                        >
+                                                            <option value="">Select Category</option>
+                                                            {masterCategories.map(cat => (
+                                                                <option key={cat.id} value={cat.id}>
+                                                                    {cat.name}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+
+
 
 
                                                     <Input

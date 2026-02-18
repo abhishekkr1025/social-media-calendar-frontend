@@ -10,6 +10,7 @@ import Clients from "./pages/Clients.jsx";
 import WordPressSites from "./pages/WordpressSites.jsx";
 import Settings from "./pages/Settings.jsx";
 import WPPosts from "./pages/WPPosts.jsx";
+import CategoryManagement from "./pages/CategoryManagement.jsx";
 
 
 export default function App() {
@@ -28,6 +29,10 @@ export default function App() {
         <Route path="/wp-sites" element={<WordPressSites />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/wp-posts" element={<WPPosts />} />
+        <Route
+          path="/wordpress-sites/:id/categories"
+          element={<CategoryManagement />}
+        />
 
        
 
