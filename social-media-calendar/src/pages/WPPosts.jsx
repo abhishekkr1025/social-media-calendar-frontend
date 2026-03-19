@@ -111,21 +111,51 @@ export default function WPPostsTest() {
                                 <TableCell>{formatDate(post.scheduled_at)}</TableCell>
                                 <TableCell>{formatDate(post.created_at)}</TableCell>
                                 <TableCell>
-                                    <div className="flex gap-2 items-center">
-                                        <Tooltip title="View all translated posts">
-                                            <button
-                                                onClick={() => openTranslations(post)}
-                                                className="flex items-center gap-1 text-purple-600 text-sm hover:underline"
+                                    <div className="flex flex-col gap-1">
+                                        {t.wp_url ? (
+                                            <a href={t.wp_url}
+                                                target="_blank"
+
+                                                rel="noreferrer"
+
+                                                className="flex items-center gap-1 text-blue-600 text-sm hover:underline"
+
                                             >
-                                                <TranslateIcon fontSize="small" />
-                                                Translations
-                                            </button>
-                                        </Tooltip>
-                                        <button className="text-red-600 text-sm hover:underline">
-                                            Delete
-                                        </button>
+
+                                                View <OpenInNewIcon sx={{ fontSize: 14 }} />
+
+                                            </a>
+
+                                        ) : (
+
+                                            <span className="text-gray-400 text-sm">—</span>
+
+                                        )}
+
+                                        {t.external_post_id && t.site_url && (
+
+
+
+                                            <a href={`${t.site_url}${t.site_path || ""}/wp-admin/post.php?post=${t.external_post_id}&action=edit`}
+
+                                                target="_blank"
+
+                                                rel="noreferrer"
+
+                                                className="flex items-center gap-1 text-orange-500 text-sm hover:underline"
+
+                                            >
+
+                                                Edit <OpenInNewIcon sx={{ fontSize: 14 }} />
+
+                                            </a>
+
+                                        )}
+
                                     </div>
+
                                 </TableCell>
+                                
                             </TableRow>
                         ))}
                     </TableBody>
