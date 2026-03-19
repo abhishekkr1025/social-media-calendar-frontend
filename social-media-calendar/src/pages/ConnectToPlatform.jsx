@@ -11,6 +11,7 @@ import {
 import { SiWordpress } from "react-icons/si";
 
 const BASE_URL = "https://prod.panditjee.com";
+// const BASE_URL = "https://localhost:5000";
 const TELEGRAM_BOT_USERNAME = "cliqsocialbot"; // without @
 
 

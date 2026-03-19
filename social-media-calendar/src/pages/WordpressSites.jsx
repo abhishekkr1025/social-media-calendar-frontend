@@ -28,6 +28,7 @@ export default function WordPressSites() {
     }, []);
 
     const BASE_URL = 'https://prod.panditjee.com'
+    // const BASE_URL = 'http://localhost:5000'
 
     async function fetchAll() {
         try {

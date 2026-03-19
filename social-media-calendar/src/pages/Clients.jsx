@@ -19,7 +19,7 @@ import LinkIcon from "@mui/icons-material/Link";
 
 
 const BASE_URL =   "https://prod.panditjee.com";
-
+// const BASE_URL =   "http://localhost:5000";
 export default function Clients() {
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);

@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 
 const API_URL = "https://prod.panditjee.com/api/wp-posts";
+// const API_URL = "http://localhost:5000/api/wp-posts"
 
 export default function WPPosts() {
     const [posts, setPosts] = useState([]);
@@ -64,7 +65,7 @@ export default function WPPosts() {
 
         try {
             const res = await fetch(
-                `https://prod.panditjee.com/api/wp-posts/${post.id}`,
+                `https://prod.panditjee.com/api/wp-posts/delete/${post.id}`,
                 { method: "DELETE" }
             );
 
@@ -85,7 +86,7 @@ export default function WPPosts() {
     async function updatePost(updatedPost) {
         try {
             const res = await fetch(
-                `https://prod.panditjee.com/api/wp-posts/${updatedPost.id}`,
+                `https://prod.panditjee.com/api/wp-posts//wp-posts/${updatedPost.id}`,
                 {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
@@ -128,6 +129,7 @@ export default function WPPosts() {
                             <TableCell><b>Client ID</b></TableCell>
                             <TableCell><b>Status</b></TableCell>
                             <TableCell><b>Language</b></TableCell>
+                            <TableCell><b>Category</b></TableCell>
                             <TableCell><b>Scheduled At</b></TableCell>
                             <TableCell><b>Created At</b></TableCell>
                             <TableCell><b>Actions</b></TableCell>
@@ -149,6 +151,10 @@ export default function WPPosts() {
 
                                 <TableCell>
                                     {post.language || "-"}
+                                </TableCell>
+
+                                <TableCell>
+                                    {post.master_category_name || "-"}
                                 </TableCell>
 
                                 <TableCell>

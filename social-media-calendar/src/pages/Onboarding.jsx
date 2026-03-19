@@ -10,6 +10,7 @@ import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from
 
 const BACKEND_URL =  "https://prod.panditjee.com";
 
+// const BACKEND_URL =  "http://localhost:5000";
 function useQuery() {
   return new URLSearchParams(useLocation().search);
 }
