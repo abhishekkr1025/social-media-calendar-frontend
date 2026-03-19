@@ -112,17 +112,15 @@ export default function WPPostsTest() {
                                 <TableCell>{formatDate(post.created_at)}</TableCell>
                                 <TableCell>
                                     <div className="flex gap-2 items-center">
-                                        {post.status === "published" && (
-                                            <Tooltip title="View all translated posts">
-                                                <button
-                                                    onClick={() => openTranslations(post)}
-                                                    className="flex items-center gap-1 text-purple-600 text-sm hover:underline"
-                                                >
-                                                    <TranslateIcon fontSize="small" />
-                                                    Translations
-                                                </button>
-                                            </Tooltip>
-                                        )}
+                                        <Tooltip title="View all translated posts">
+                                            <button
+                                                onClick={() => openTranslations(post)}
+                                                className="flex items-center gap-1 text-purple-600 text-sm hover:underline"
+                                            >
+                                                <TranslateIcon fontSize="small" />
+                                                Translations
+                                            </button>
+                                        </Tooltip>
                                         <button className="text-red-600 text-sm hover:underline">
                                             Delete
                                         </button>
