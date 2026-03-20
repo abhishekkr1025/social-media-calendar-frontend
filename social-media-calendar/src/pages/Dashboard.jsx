@@ -156,59 +156,58 @@ useEffect(() => {
 
 
 
-    const scheduleWordPressPost = async () => {
-        if (!selectedClient) {
-            showWarning("Please select a client");
-        }
+const scheduleWordPressPost = async () => {
+    if (!selectedClient) {
+        showWarning("Please select a client");
+        return;
+    }
 
-        if (!wpPost.title || !wpPost.content) {
-            showWarning("Title and content are required");
-        }
+    if (!wpPost.title || !wpPost.content) {
+        showWarning("Title and content are required");
+        return;
+    }
 
-        console.log(`Date: ${wpPost.date}`);
-        console.log(`Time: ${wpPost.time}`);
+    if (!wpPost.date || !wpPost.time) {
+        showWarning("Please select date and time");
+        return;
+    }
 
-        if (!wpPost.date || !wpPost.time) {
-            showWarning("Please select date and time");
-        }
+    const scheduled_at = `${wpPost.date} ${wpPost.time}:00`;
 
-        const scheduled_at = `${wpPost.date} ${wpPost.time}:00`;
+    const formData = new FormData();
+    formData.append("clientId", selectedClient.id);
+    formData.append("title", wpPost.title);
+    formData.append("content", wpPost.content);
+    formData.append("excerpt", wpPost.excerpt || "");
+    formData.append("scheduled_at", scheduled_at);
+    formData.append("status", "scheduled");
+    formData.append("language", wpPost.language);
+    formData.append("master_category_id", wpPost.master_category_id);
 
-        const formData = new FormData();
-        formData.append("clientId", selectedClient.id);
-        formData.append("title", wpPost.title);
-        formData.append("content", wpPost.content);
-        formData.append("excerpt", wpPost.excerpt || "");
-        formData.append("scheduled_at", scheduled_at);
-        formData.append("status", "scheduled");
-        formData.append("language", wpPost.language); // ✅ dynamic
-        formData.append("master_category_id",wpPost.master_category_id)
+    // ← FIXED: was wpPost.file, now wpPost.featured_image
+    if (wpPost.featured_image) {
+        formData.append("featured_image", wpPost.featured_image);
+    }
 
-        if (wpPost.file) {
-            formData.append("file", wpPost.file);
-        }
+    const res = await fetch(`${BASE_URL}/api/wp-posts`, {
+        method: "POST",
+        body: formData
+    });
 
-        console.log(formData.get("scheduled_at"));
-        console.log(formData.get("title"))
-        console.log(formData.get("content"))
-        console.log(formData.get("clientId"))
+    if (!res.ok) {
+        const err = await res.text();
+        console.error(err);
+        showError("Failed to schedule blog post");
+        return;
+    }
 
-        const res = await fetch(`${BASE_URL}/api/wp-posts`, {
-            method: "POST",
-            body: formData
-        });
+    showSuccess("Blog Added Successfully!");
 
-        if (!res.ok) {
-            const err = await res.text();
-            console.error(err);
-            showError("Failed to schedule blog post");
-            return;
-        }
+    // Reset featured_image after success
+    setWpPost(prev => ({ ...prev, featured_image: null }));
 
-        showSuccess("Blog Added Successfully!")
-
-        closeScheduler();
-    };
+    closeScheduler();
+};
 
 
 
