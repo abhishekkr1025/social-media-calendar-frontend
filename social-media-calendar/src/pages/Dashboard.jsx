@@ -69,6 +69,7 @@ function Dashboard() {
         date: "",
         time: "",
         file: null,
+        featured_image: null,  // ← ADD
         wpStatus: "publish",
         language: "",
         master_category_id: ""
@@ -720,7 +721,7 @@ useEffect(() => {
 
                                                 <button
                                                     className={`flex-1 py-2 rounded-md text-sm font-medium transition
-              ${schedulerType === "blog"
+                                                    ${schedulerType === "blog"
                                                             ? "bg-white shadow text-purple-600"
                                                             : "text-gray-500 hover:text-gray-700"
                                                         }`}
@@ -848,9 +849,46 @@ useEffect(() => {
                                                         </select>
                                                     </div>
 
+                                                    <div>
+                                                        <label className="text-sm font-medium mb-1 block">
+                                                            Featured Image <span className="text-gray-400 font-normal">(optional)</span>
+                                                        </label>
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={(e) =>
+                                                                setWpPost({
+                                                                    ...wpPost,
+                                                                    featured_image: e.target.files?.[0] || null
+                                                                })
+                                                            }
+                                                            className="w-full text-sm border border-gray-300 rounded-md px-3 py-2"
+                                                        />
+                                                        {wpPost.featured_image && (
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <span className="text-xs text-green-600">
+                                                                    ✓ {wpPost.featured_image.name}
+                                                                </span>
+                                                                <button
+                                                                    className="text-xs text-red-500 hover:underline"
+                                                                    onClick={() => setWpPost({ ...wpPost, featured_image: null })}
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                        {!wpPost.featured_image && (
+                                                            <p className="text-xs text-gray-400 mt-1">
+                                                                If no image is uploaded, the site default image will be used.
+                                                            </p>
+                                                        )}
+                                                    </div>
 
 
 
+                                                     <label className="text-sm font-medium mb-1 block">
+                                                            Blog Title
+                                                        </label>
                                                     <Input
                                                         placeholder="Blog title"
                                                         value={wpPost.title}
@@ -858,6 +896,10 @@ useEffect(() => {
                                                             setWpPost({ ...wpPost, title: e.target.value })
                                                         }
                                                     />
+
+                                                     <label className="text-sm font-medium mb-1 block">
+                                                            Blog Content
+                                                        </label>
 
                                                     <Textarea
                                                         placeholder="Write your blog content..."

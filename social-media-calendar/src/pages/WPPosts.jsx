@@ -10,6 +10,8 @@ import TranslateIcon from "@mui/icons-material/Translate";
 
 const API_URL = "https://prod.panditjee.com/api/wp-posts";
 
+// const API_URL = "http://localhost:5000/api/wp-posts";
+
 export default function WPPostsTest() {
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -45,7 +47,7 @@ export default function WPPostsTest() {
         setModalOpen(true);
         setTranslationsLoading(true);
         try {
-            const res = await fetch(`https://prod.panditjee.com/api/wp-posts/${post.id}/translations`);
+            const res = await fetch(`${API_URL}/api/wp-posts/${post.id}/translations`);
             const data = await res.json();
             setTranslations(data);
         } catch {
