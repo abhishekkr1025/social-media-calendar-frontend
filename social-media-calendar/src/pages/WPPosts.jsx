@@ -47,7 +47,7 @@ export default function WPPostsTest() {
         setModalOpen(true);
         setTranslationsLoading(true);
         try {
-            const res = await fetch(`${API_URL}/api/wp-posts/${post.id}/translations`);
+            const res = await fetch(`https://prod.panditjee.com/api/wp-posts/${post.id}/translations`);
             const data = await res.json();
             setTranslations(data);
         } catch {
