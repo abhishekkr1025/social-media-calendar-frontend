@@ -62,18 +62,20 @@ function Dashboard() {
         file: null
     })
 
-    const [wpPost, setWpPost] = useState({
-        title: "",
-        content: "",
-        excerpt: "",
-        date: "",
-        time: "",
-        file: null,
-        featured_image: null,  // ← ADD
-        wpStatus: "publish",
-        language: "",
-        master_category_id: ""
-    });
+const [wpPost, setWpPost] = useState({
+    title: "",
+    content: "",
+    excerpt: "",
+    date: "",
+    time: "",
+    file: null,
+    featured_image: null,
+    wpStatus: "publish",
+    language: "",
+    master_category_id: "",
+    slug: "",    // ← ADD
+    tags: "",    // ← ADD
+});
 
 
     const {
@@ -183,6 +185,8 @@ const scheduleWordPressPost = async () => {
     formData.append("status", "scheduled");
     formData.append("language", wpPost.language);
     formData.append("master_category_id", wpPost.master_category_id);
+    formData.append("slug", wpPost.slug || "");
+    formData.append("tags", wpPost.tags || "");
 
     // ← FIXED: was wpPost.file, now wpPost.featured_image
     if (wpPost.featured_image) {
@@ -225,6 +229,8 @@ const scheduleWordPressPost = async () => {
 
     const closeScheduler = () => {
         setIsClosing(true);
+        // inside closeScheduler or after showSuccess
+        setWpPost(prev => ({ ...prev, slug: "", tags: "", featured_image: null }));
 
         // wait for animation to finish
         setTimeout(() => {
@@ -908,6 +914,56 @@ const scheduleWordPressPost = async () => {
                                                             setWpPost({ ...wpPost, content: e.target.value })
                                                         }
                                                     />
+
+                                                    {/* Slug */}
+                                                    <div>
+                                                        <label className="text-sm font-medium mb-1 block">
+                                                            Slug <span className="text-gray-400 font-normal text-xs">(optional)</span>
+                                                        </label>
+                                                        <div className="flex items-center border border-gray-300 rounded-md overflow-hidden">
+                                                            <span className="bg-gray-50 px-3 py-2 text-xs text-gray-400 border-r border-gray-300 whitespace-nowrap">
+                                                                /article/
+                                                            </span>
+                                                            <input
+                                                                type="text"
+                                                                value={wpPost.slug}
+                                                                onChange={e =>
+                                                                    setWpPost({
+                                                                        ...wpPost,
+                                                                        slug: e.target.value
+                                                                            .toLowerCase()
+                                                                            .replace(/\s+/g, "-")
+                                                                            .replace(/[^a-z0-9-]/g, "")
+                                                                    })
+                                                                }
+                                                                placeholder="my-post-slug"
+                                                                className="flex-1 px-3 py-2 text-sm focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Tags */}
+                                                    <div>
+                                                        <label className="text-sm font-medium mb-1 block">
+                                                            Tags <span className="text-gray-400 font-normal text-xs">(optional — comma separated)</span>
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={wpPost.tags}
+                                                            onChange={e => setWpPost({ ...wpPost, tags: e.target.value })}
+                                                            placeholder="politics, india, news"
+                                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none"
+                                                        />
+                                                        {wpPost.tags && (
+                                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                                {wpPost.tags.split(",").map(t => t.trim()).filter(Boolean).map((tag, i) => (
+                                                                    <span key={i} className="bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5 text-xs">
+                                                                        #{tag}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
 
                                                     {/* <input
                                                         type="file"

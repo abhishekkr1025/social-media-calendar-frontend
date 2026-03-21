@@ -33,6 +33,10 @@ export default function WPPostsTest() {
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState(null);
     const [saveSuccess, setSaveSuccess] = useState(false);
+    const [editSlug, setEditSlug] = useState("");
+    const [editTags, setEditTags] = useState("");
+    const [applyingAll, setApplyingAll] = useState(false);
+    const [applyAllResult, setApplyAllResult] = useState(null);
 
     useEffect(() => {
         fetch(API_URL)
@@ -66,6 +70,42 @@ export default function WPPostsTest() {
         }
     }
 
+
+    async function applyTagsAndSlugToAll() {
+    if (!editTags && !editSlug) {
+        setSaveError("Enter tags or slug to apply to all translations.");
+        return;
+    }
+
+    setApplyingAll(true);
+    setApplyAllResult(null);
+
+    try {
+        const res = await fetch(
+            `https://prod.panditjee.com/api/wp-posts/translations/apply-all/${selectedPost.id}`,
+            {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tags: editTags, slug: editSlug }),
+            }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            setSaveError(data.error || "Failed to apply to all.");
+            return;
+        }
+
+        setApplyAllResult(data.results);
+
+    } catch (err) {
+        setSaveError("Network error. Please try again.");
+    } finally {
+        setApplyingAll(false);
+    }
+}
+
     function openPreview(translation) {
         setPreviewTranslation(translation);
         setIsEditing(false);
@@ -75,12 +115,14 @@ export default function WPPostsTest() {
     }
 
     function startEditing() {
-        setEditTitle(previewTranslation.title || "");
-        setEditContent(previewTranslation.content || "");
-        setIsEditing(true);
-        setSaveError(null);
-        setSaveSuccess(false);
-    }
+    setEditTitle(previewTranslation.title || "");
+    setEditContent(previewTranslation.content || "");
+    setEditSlug(previewTranslation.slug || "");
+    setEditTags(previewTranslation.tags || "");
+    setIsEditing(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+}
 
     function cancelEditing() {
         setIsEditing(false);
@@ -103,7 +145,12 @@ export default function WPPostsTest() {
                 {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ title: editTitle, content: editContent }),
+                    body: JSON.stringify({
+                        title: editTitle,
+                        content: editContent,
+                        slug: editSlug,
+                        tags: editTags,
+                    }),
                 }
             );
 
@@ -115,7 +162,13 @@ export default function WPPostsTest() {
             }
 
             // Update local state
-            const updated = { ...previewTranslation, title: editTitle, content: editContent };
+            const updated = {
+                ...previewTranslation,
+                title: editTitle,
+                content: editContent,
+                slug: editSlug,
+                tags: editTags,
+            };
             setPreviewTranslation(updated);
             setTranslations(prev =>
                 prev.map(t => t.id === previewTranslation.id ? updated : t)
@@ -378,6 +431,33 @@ export default function WPPostsTest() {
                                 </div>
                             )}
 
+                            {!isEditing && (previewTranslation.slug || previewTranslation.tags) && (
+                                <div className="flex flex-wrap gap-4 text-sm text-gray-600 bg-gray-50 rounded p-3">
+                                    {previewTranslation.slug && (
+                                        <span>
+                                            🔗 <b>Slug:</b> /{previewTranslation.slug}
+                                        </span>
+                                    )}
+                                    {previewTranslation.tags && (
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span>🏷️ <b>Tags:</b></span>
+                                            {previewTranslation.tags.split(",")
+                                                .map(t => t.trim())
+                                                .filter(Boolean)
+                                                .map((tag, i) => (
+                                                    <span
+                                                        key={i}
+                                                        className="bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5 text-xs"
+                                                    >
+                                                        #{tag}
+                                                    </span>
+                                                ))
+                                            }
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* ── EDIT MODE ── */}
                             {isEditing ? (
                                 <div className="space-y-4">
@@ -406,6 +486,102 @@ export default function WPPostsTest() {
                                         <p className="text-xs text-gray-400 mt-1">
                                             HTML is supported. Changes will be republished to WordPress immediately.
                                         </p>
+                                    </div>
+                                    {/* Slug */}
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">
+                                            Slug <span className="text-gray-400 font-normal normal-case">(optional)</span>
+                                        </label>
+                                        <div className="flex items-center border border-gray-300 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
+                                            <span className="bg-gray-50 px-3 py-2 text-xs text-gray-400 border-r border-gray-300 whitespace-nowrap">
+                                                /article/
+                                            </span>
+                                            <input
+                                                type="text"
+                                                value={editSlug}
+                                                onChange={e =>
+                                                    setEditSlug(
+                                                        e.target.value
+                                                            .toLowerCase()
+                                                            .replace(/\s+/g, "-")
+                                                            .replace(/[^a-z0-9-]/g, "")
+                                                    )
+                                                }
+                                                placeholder="my-post-slug"
+                                                className="flex-1 px-3 py-2 text-sm focus:outline-none"
+                                            />
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            Lowercase letters, numbers and hyphens only.
+                                        </p>
+                                    </div>
+
+                                    {/* Tags */}
+                                  
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">
+                                            Tags <span className="text-gray-400 font-normal normal-case">(optional — comma separated)</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editTags}
+                                            onChange={e => setEditTags(e.target.value)}
+                                            placeholder="politics, india, news, election"
+                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            Tags will be created on WordPress automatically if they don't exist.
+                                        </p>
+                                        {editTags && (
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {editTags.split(",").map(t => t.trim()).filter(Boolean).map((tag, i) => (
+                                                    <span
+                                                        key={i}
+                                                        className="bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5 text-xs"
+                                                    >
+                                                        #{tag}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Apply to all button */}
+                                    <div className="border-t pt-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-700">
+                                                    Apply tags & slug to all translations
+                                                </p>
+                                                <p className="text-xs text-gray-400 mt-0.5">
+                                                    This will update and republish all language versions immediately.
+                                                </p>
+                                            </div>
+                                            <Button
+                                                onClick={applyTagsAndSlugToAll}
+                                                variant="outlined"
+                                                color="secondary"
+                                                size="small"
+                                                disabled={applyingAll || (!editTags && !editSlug)}
+                                                startIcon={applyingAll ? <CircularProgress size={14} /> : <TranslateIcon />}
+                                            >
+                                                {applyingAll ? "Applying..." : "Apply to All"}
+                                            </Button>
+                                        </div>
+
+                                        {/* Per-language results */}
+                                        {applyAllResult && (
+                                            <div className="mt-3 space-y-1">
+                                                {applyAllResult.map((r, i) => (
+                                                    <div key={i} className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded ${r.success ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                                                        }`}>
+                                                        <span>{r.success ? "✅" : "❌"}</span>
+                                                        <span className="font-medium">{r.language}</span>
+                                                        <span>{r.success ? "Updated & republished" : r.error}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ) : (
