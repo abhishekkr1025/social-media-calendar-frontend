@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input.jsx'
 import { Textarea } from '@/components/ui/textarea.jsx'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.jsx'
 import { Badge } from '@/components/ui/badge.jsx'
-import { Calendar, Plus, Download, Trash2, Facebook, Instagram, Twitter, Linkedin, Youtube } from 'lucide-react'
+import { Calendar, Plus, Download, Trash2, Facebook, Instagram, Twitter, Linkedin, Youtube, Send } from 'lucide-react'
 
 import '../App.css'
 import { useNavigate } from 'react-router-dom'
@@ -18,11 +18,13 @@ import { showError, showSuccess, showWarning } from '@/components/Toast'
 import MenuIcon from "@mui/icons-material/Menu";
 import { IconButton, Toolbar } from "@mui/material";
 import Sidebar from "@/components/Sidebar";
+import { Telegram } from '@mui/icons-material'
+import BottomSheetScheduler from '@/components/BottomSheetScheduler'
 
 
 
 
-function Dashboard() {
+function DashboardDummy() {
     const [clients, setClients] = useState([])
     const [posts, setPosts] = useState([])
     const [showAddClient, setShowAddClient] = useState(false)
@@ -42,6 +44,9 @@ function Dashboard() {
     const [isWpSchedulerOpen, setIsWpSchedulerOpen] = useState(false);
     const [schedulerType, setSchedulerType] = useState("social");
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [wpCategories, setWpCategories] = useState([]);
+    const [masterCategories, setMasterCategories] = useState([]);
+
 
     // "social" | "blog"
 
@@ -58,15 +63,20 @@ function Dashboard() {
         file: null
     })
 
-    const [wpPost, setWpPost] = useState({
-        title: "",
-        content: "",
-        excerpt: "",
-        date: "",
-        time: "",
-        file: null,
-        wpStatus: "publish"
-    });
+const [wpPost, setWpPost] = useState({
+    title: "",
+    content: "",
+    excerpt: "",
+    date: "",
+    time: "",
+    file: null,
+    featured_image: null,
+    wpStatus: "publish",
+    language: "",
+    master_category_id: "",
+    slug: "",    // ← ADD
+    tags: "",    // ← ADD
+});
 
 
     const {
@@ -78,10 +88,20 @@ function Dashboard() {
         paginatedData: paginatedQueuedPosts
     } = usePagination(queuedPosts, 5);
 
+    const BLOG_LANGUAGES = [
+        { label: "English", value: "English" },
+        { label: "Hindi", value: "Hindi" },
+        { label: "Tamil", value: "Tamil" },
+        { label: "Telugu", value: "Telugu" },
+        { label: "Marathi", value: "Marathi" },
+        { label: "Bengali", value: "Bengali" },
+        { label: "Gujarati", value: "Gujarati" }
+    ];
 
-    const BASE_URL = "https://prod.panditjee.com"
-    // const BASE_URL = "http://localhost:5000"
-    
+
+
+    // const BASE_URL = "https://prod.panditjee.com";
+    const BASE_URL = "http://localhost:5000";
 
     const fetchClients = async () => {
         try {
@@ -118,58 +138,81 @@ function Dashboard() {
         setPosts(formatted);
     }, [clients, rawPosts]);
 
+//     useEffect(() => {
+//   if (!selectedClient || !wpPost.language) return;
 
-    const scheduleWordPressPost = async () => {
-        if (!selectedClient) {
-            showWarning("Please select a client");
-        }
+//   fetch(
+//     `${BASE_URL}/api/master-categories/by-client-language?client_id=${selectedClient.id}&language=${wpPost.language}`
+//   )
+//     .then(res => res.json())
+//     .then(data => setWpCategories(data))
+//     .catch(err => console.error("Failed to load categories", err));
 
-        if (!wpPost.title || !wpPost.content) {
-            showWarning("Title and content are required");
-        }
+// }, [selectedClient, wpPost.language]);
 
-        console.log(`Date: ${wpPost.date}`);
-        console.log(`Time: ${wpPost.time}`);
+useEffect(() => {
+  fetch(`${BASE_URL}/api/master-categories`)
+    .then(res => res.json())
+    .then(setMasterCategories);
+}, []);
 
-        if (!wpPost.date || !wpPost.time) {
-            showWarning("Please select date and time");
-        }
 
-        const scheduled_at = `${wpPost.date} ${wpPost.time}:00`;
 
-        const formData = new FormData();
-        formData.append("clientId", selectedClient.id);
-        formData.append("title", wpPost.title);
-        formData.append("content", wpPost.content);
-        formData.append("excerpt", wpPost.excerpt || "");
-        formData.append("scheduled_at", scheduled_at);
-        formData.append("status", "scheduled");
 
-        if (wpPost.file) {
-            formData.append("file", wpPost.file);
-        }
+const scheduleWordPressPost = async () => {
+    if (!selectedClient) {
+        showWarning("Please select a client");
+        return;
+    }
 
-        console.log(formData.get("scheduled_at"));
-        console.log(formData.get("title"))
-        console.log(formData.get("content"))
-        console.log(formData.get("clientId"))
+    if (!wpPost.title || !wpPost.content) {
+        showWarning("Title and content are required");
+        return;
+    }
 
-        const res = await fetch(`${BASE_URL}/api/wp-posts`, {
-            method: "POST",
-            body: formData
-        });
+    if (!wpPost.date || !wpPost.time) {
+        showWarning("Please select date and time");
+        return;
+    }
 
-        if (!res.ok) {
-            const err = await res.text();
-            console.error(err);
-            showError("Failed to schedule blog post");
-            return;
-        }
+    const scheduled_at = `${wpPost.date} ${wpPost.time}:00`;
 
-        showSuccess("Blog Added Successfully!")
+    const formData = new FormData();
+    formData.append("clientId", selectedClient.id);
+    formData.append("title", wpPost.title);
+    formData.append("content", wpPost.content);
+    formData.append("excerpt", wpPost.excerpt || "");
+    formData.append("scheduled_at", scheduled_at);
+    formData.append("status", "scheduled");
+    formData.append("language", wpPost.language);
+    formData.append("master_category_id", wpPost.master_category_id);
+    formData.append("slug", wpPost.slug || "");
+    formData.append("tags", wpPost.tags || "");
 
-        closeScheduler();
-    };
+    // ← FIXED: was wpPost.file, now wpPost.featured_image
+    if (wpPost.featured_image) {
+        formData.append("featured_image", wpPost.featured_image);
+    }
+
+    const res = await fetch(`${BASE_URL}/api/wp-posts`, {
+        method: "POST",
+        body: formData
+    });
+
+    if (!res.ok) {
+        const err = await res.text();
+        console.error(err);
+        showError("Failed to schedule blog post");
+        return;
+    }
+
+    showSuccess("Blog Added Successfully!");
+
+    // Reset featured_image after success
+    setWpPost(prev => ({ ...prev, featured_image: null }));
+
+    closeScheduler();
+};
 
 
 
@@ -187,6 +230,8 @@ function Dashboard() {
 
     const closeScheduler = () => {
         setIsClosing(true);
+        // inside closeScheduler or after showSuccess
+        setWpPost(prev => ({ ...prev, slug: "", tags: "", featured_image: null }));
 
         // wait for animation to finish
         setTimeout(() => {
@@ -253,7 +298,8 @@ function Dashboard() {
         twitter: <Twitter className="w-4 h-4" />,
         linkedin: <Linkedin className="w-4 h-4" />,
         youtube: <Youtube className="w-4 h-4" />,
-        wordpress: <SiWordpress className='w-4 h-4' />
+        wordpress: <SiWordpress className='w-4 h-4' />,
+        telegram: <Send className="w-5 h-5" />
     }
 
     const platformColors = {
@@ -262,7 +308,8 @@ function Dashboard() {
         twitter: 'bg-sky-500',
         linkedin: 'bg-blue-700',
         youtube: 'bg-red-500',
-        wordpress: 'bg-blue-500'
+        wordpress: 'bg-blue-500',
+        telegram: 'bg-sky-500'
 
     }
 
@@ -619,7 +666,7 @@ function Dashboard() {
 
             {/* Main Content */}
             <div
-                className={`flex-1 transition-all duration-300 ${sidebarOpen ? "ml-[240px]" : "ml-0"
+                className={`flex-1 transition-all duration-300 ${sidebarOpen ? "ml-[10px]" : "ml-0"
                     }`}
             >
                 {/* Header */}
@@ -633,219 +680,16 @@ function Dashboard() {
                         {/* Main Content */}
                         <div className="lg:col-span-8 space-y-6">
                             {/* Add Post Section */}
-                            {isSchedulerOpen && (
-                                <div
-                                    className={`
-      fixed inset-0 z-50 flex items-center justify-center
-      bg-black/40
-      transition-opacity duration-200
-      ${isClosing ? "opacity-0" : "opacity-100"}
-    `}
-                                    onClick={closeScheduler} // outside click
-                                >
-                                    <Card
-                                        className={`
-    w-full max-w-lg
-    max-h-[80vh]
-    overflow-hidden
-    transform transition-all duration-200
-    ${isClosing ? "scale-95 opacity-0" : "scale-100 opacity-100"}
-  `}
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-
-                                        <CardHeader>
-                                            <CardTitle>
-                                                Schedule {schedulerType === "social" ? "Social Post" : "Blog Post"} —{" "}
-                                                {selectedDate}
-                                            </CardTitle>
-                                        </CardHeader>
-
-                                        <CardContent
-                                            className="space-y-4 overflow-y-auto max-h-[65vh] pr-2"
-                                        >
-
-                                            {/* 🔀 TOGGLE */}
-                                            <div className="flex rounded-lg bg-gray-100 p-1">
-                                                <button
-                                                    className={`flex-1 py-2 rounded-md text-sm font-medium transition
-              ${schedulerType === "social"
-                                                            ? "bg-white shadow text-blue-600"
-                                                            : "text-gray-500 hover:text-gray-700"
-                                                        }`}
-                                                    onClick={() => setSchedulerType("social")}
-                                                >
-                                                    Social Post
-                                                </button>
-
-                                                <button
-                                                    className={`flex-1 py-2 rounded-md text-sm font-medium transition
-              ${schedulerType === "blog"
-                                                            ? "bg-white shadow text-purple-600"
-                                                            : "text-gray-500 hover:text-gray-700"
-                                                        }`}
-                                                    onClick={() => setSchedulerType("blog")}
-                                                >
-                                                    Blog Post
-                                                </button>
-                                            </div>
-
-                                            {/* 👤 CLIENT */}
-                                            <div>
-                                                <label className="text-sm font-medium">Client</label>
-                                                <div className="flex gap-2 flex-wrap">
-                                                    {clients.map((client) => (
-                                                        <Button
-                                                            key={client.id}
-                                                            size="sm"
-                                                            variant={
-                                                                selectedClient?.id === client.id ? "default" : "outline"
-                                                            }
-                                                            onClick={() => setSelectedClient(client)}
-                                                        >
-                                                            {client.name}
-                                                        </Button>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* =====================
-            SOCIAL POST
-        ===================== */}
-                                            {schedulerType === "social" && (
-                                                <>
-                                                    <Textarea
-                                                        placeholder="Post content"
-                                                        value={newPost.content}
-                                                        onChange={(e) =>
-                                                            setNewPost({ ...newPost, content: e.target.value })
-                                                        }
-                                                    />
-
-                                                    <div>
-                                                        <label className="text-sm font-medium mb-1 block">
-                                                            Upload Image / Video
-                                                        </label>
-                                                        <input
-                                                            type="file"
-                                                            accept="image/*,video/*"
-                                                            onChange={(e) =>
-                                                                setNewPost({
-                                                                    ...newPost,
-                                                                    file: e.target.files?.[0] || null,
-                                                                })
-                                                            }
-                                                        />
-                                                    </div>
-
-                                                    <div className="flex gap-2 flex-wrap">
-                                                        {Object.keys(platformIcons)
-                                                            .filter((p) => p !== "wordpress")
-                                                            .map((platform) => (
-                                                                <Button
-                                                                    key={platform}
-                                                                    size="sm"
-                                                                    variant={
-                                                                        newPost.platforms.includes(platform)
-                                                                            ? "default"
-                                                                            : "outline"
-                                                                    }
-                                                                    onClick={() => togglePlatform(platform)}
-                                                                >
-                                                                    {platformIcons[platform]} {platform}
-                                                                </Button>
-                                                            ))}
-                                                    </div>
-                                                </>
-                                            )}
-
-                                            {/* =====================
-            BLOG POST (WORDPRESS)
-        ===================== */}
-                                            {schedulerType === "blog" && (
-                                                <>
-                                                    <Input
-                                                        placeholder="Blog title"
-                                                        value={wpPost.title}
-                                                        onChange={(e) =>
-                                                            setWpPost({ ...wpPost, title: e.target.value })
-                                                        }
-                                                    />
-
-                                                    <Textarea
-                                                        placeholder="Write your blog content..."
-                                                        rows={6}
-                                                        value={wpPost.content}
-                                                        onChange={(e) =>
-                                                            setWpPost({ ...wpPost, content: e.target.value })
-                                                        }
-                                                    />
-
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        onChange={(e) =>
-                                                            setWpPost({
-                                                                ...wpPost,
-                                                                featuredImage: e.target.files?.[0] || null,
-                                                            })
-                                                        }
-                                                    />
-                                                    <Textarea
-                                                        placeholder="Excerpt (optional)"
-                                                        rows={2}
-                                                        value={wpPost.excerpt}
-                                                        onChange={(e) =>
-                                                            setWpPost({ ...wpPost, excerpt: e.target.value })
-                                                        }
-                                                    />
-                                                </>
-                                            )}
-
-                                            {/* ⏰ TIME */}
-                                            {schedulerType === "social" ? (
-                                                <Input
-                                                    type="time"
-                                                    value={newPost.time}
-                                                    onChange={(e) =>
-                                                        setNewPost({ ...newPost, time: e.target.value })
-                                                    }
-                                                />
-                                            ) : (
-                                                <Input
-                                                    type="time"
-                                                    value={wpPost.time}
-                                                    onChange={(e) =>
-                                                        setWpPost({ ...wpPost, time: e.target.value })
-                                                    }
-                                                />
-                                            )}
-
-
-                                            {/* 🔘 ACTIONS */}
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    className="flex-1"
-                                                    onClick={() =>
-                                                        schedulerType === "social"
-                                                            ? addPost()
-                                                            : scheduleWordPressPost()
-                                                    }
-                                                >
-                                                    Schedule {schedulerType === "social" ? "Post" : "Blog"}
-                                                </Button>
-
-                                                <Button
-                                                    variant="outline"
-                                                    onClick={closeScheduler}
-                                                >
-                                                    Cancel
-                                                </Button>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-                            )}
+                         <BottomSheetScheduler
+    isOpen={isSchedulerOpen}
+    onClose={() => setIsSchedulerOpen(false)}
+    selectedDate={selectedDate}
+    clients={clients}
+    selectedClient={selectedClient}
+    onSelectClient={setSelectedClient}
+    masterCategories={masterCategories}
+    onPostScheduled={loadAllPosts}
+/>
 
 
 
@@ -1345,4 +1189,4 @@ function Dashboard() {
     )
 }
 
-export default Dashboard
+export default DashboardDummy

@@ -45,6 +45,7 @@ function Dashboard() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [wpCategories, setWpCategories] = useState([]);
     const [masterCategories, setMasterCategories] = useState([]);
+    const [wpPosts, setWpPosts] = useState([]);
 
 
     // "social" | "blog"
@@ -112,11 +113,31 @@ const [wpPost, setWpPost] = useState({
         }
     };
 
+    async function loadWpPostsForCalendar() {
+    const res = await fetch(`${BASE_URL}/api/wp-posts`);
+    const data = await res.json();
+    // Normalize to same shape as social posts
+    const formatted = data.map(p => {
+        const dt = new Date(p.scheduled_at);
+        return {
+            id: `wp-${p.id}`,
+            date: toLocalDateString(dt),
+            time: dt.toISOString().split("T")[1].slice(0, 5),
+            title: p.title,
+            type: 'wp',
+            status: p.status,
+            language: p.language,
+        };
+    });
+    setWpPosts(formatted);
+}
+
     useEffect(() => {
         loadQueued();
         loadPublished();
         fetchClients();
         loadAllPosts();
+        loadWpPostsForCalendar()
     }, [selectedClient]);
 
 
@@ -891,9 +912,9 @@ const scheduleWordPressPost = async () => {
 
 
 
-                                                     <label className="text-sm font-medium mb-1 block">
-                                                            Blog Title
-                                                        </label>
+                                                    <label className="text-sm font-medium mb-1 block">
+                                                        Blog Title
+                                                    </label>
                                                     <Input
                                                         placeholder="Blog title"
                                                         value={wpPost.title}
@@ -902,9 +923,9 @@ const scheduleWordPressPost = async () => {
                                                         }
                                                     />
 
-                                                     <label className="text-sm font-medium mb-1 block">
-                                                            Blog Content
-                                                        </label>
+                                                    <label className="text-sm font-medium mb-1 block">
+                                                        Blog Content
+                                                    </label>
 
                                                     <Textarea
                                                         placeholder="Write your blog content..."
@@ -1068,6 +1089,7 @@ const scheduleWordPressPost = async () => {
                                     <div className="w-full max-w-none">
                                         <MonthCalendar
                                             posts={filteredPosts}
+                                            wpPosts={wpPosts} 
                                             calendarDate={calendarDate}
                                             onDateClick={(date) => {
                                                 setSelectedDate(date);
