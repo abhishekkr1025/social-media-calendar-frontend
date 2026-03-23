@@ -37,6 +37,7 @@ export default function WPPostsTest() {
     const [editTags, setEditTags] = useState("");
     const [applyingAll, setApplyingAll] = useState(false);
     const [applyAllResult, setApplyAllResult] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
 
     useEffect(() => {
         fetch(API_URL)
@@ -186,6 +187,38 @@ export default function WPPostsTest() {
             setIsSaving(false);
         }
     }
+
+    async function deleteTranslation(translationId, language) {
+    if (!window.confirm(`Delete the ${language} translation from WordPress? This cannot be undone.`)) return;
+
+    setDeletingId(translationId);
+    try {
+        const res = await fetch(
+            `https://prod.panditjee.com/api/wp-posts/translations/${translationId}`,
+            { method: "DELETE" }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            alert(`Failed: ${data.error}`);
+            return;
+        }
+
+        // Remove from local state
+        setTranslations(prev => prev.filter(t => t.id !== translationId));
+
+        // Close preview if it was open for this translation
+        if (previewTranslation?.id === translationId) {
+            setPreviewOpen(false);
+        }
+
+    } catch (err) {
+        alert("Network error. Please try again.");
+    } finally {
+        setDeletingId(null);
+    }
+}
 
     if (loading) {
         return (
@@ -338,13 +371,31 @@ export default function WPPostsTest() {
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <button
-                                                onClick={() => openPreview(t)}
-                                                className="flex items-center gap-1 text-sm text-indigo-600 hover:underline"
-                                            >
-                                                <EditIcon fontSize="small" />
-                                                Preview / Edit
-                                            </button>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                <button
+                                                    onClick={() => openPreview(t)}
+                                                    className="flex items-center gap-1 text-sm text-indigo-600 hover:underline"
+                                                >
+                                                    <EditIcon fontSize="small" />
+                                                    Preview / Edit
+                                                </button>
+
+                                                {/* ← ADD DELETE BUTTON */}
+                                                <button
+                                                    onClick={() => deleteTranslation(t.id, t.language)}
+                                                    disabled={deletingId === t.id}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: 4,
+                                                        fontSize: 12, fontWeight: 600,
+                                                        color: deletingId === t.id ? '#9B9590' : '#DC2626',
+                                                        background: 'none', border: 'none',
+                                                        cursor: deletingId === t.id ? 'not-allowed' : 'pointer',
+                                                        padding: 0,
+                                                    }}
+                                                >
+                                                    {deletingId === t.id ? '⟳ Deleting...' : '🗑 Delete'}
+                                                </button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -602,25 +653,30 @@ export default function WPPostsTest() {
                 <DialogActions sx={{ px: 3, py: 2 }}>
                     {isEditing ? (
                         <>
-                            <Button
-                                onClick={cancelEditing}
-                                startIcon={<CancelIcon />}
-                                color="inherit"
-                                disabled={isSaving}
-                            >
+                            <Button onClick={cancelEditing} startIcon={<CancelIcon />} color="inherit" disabled={isSaving}>
                                 Cancel
                             </Button>
                             <Button
                                 onClick={saveEdits}
                                 startIcon={isSaving ? <CircularProgress size={16} /> : <SaveIcon />}
-                                variant="contained"
-                                disabled={isSaving}
+                                variant="contained" disabled={isSaving}
                             >
                                 {isSaving ? "Saving & Publishing..." : "Save & Republish"}
                             </Button>
                         </>
                     ) : (
                         <>
+                            {/* ← ADD DELETE BUTTON IN PREVIEW MODE */}
+                            <Button
+                                onClick={() => deleteTranslation(previewTranslation.id, previewTranslation.language)}
+                                disabled={deletingId === previewTranslation?.id}
+                                color="error"
+                                startIcon={deletingId === previewTranslation?.id ? <CircularProgress size={14} /> : null}
+                                sx={{ mr: 'auto' }} // pushes it to the left
+                            >
+                                {deletingId === previewTranslation?.id ? 'Deleting...' : '🗑 Delete from WordPress'}
+                            </Button>
+
                             <Button onClick={startEditing} startIcon={<EditIcon />} variant="outlined">
                                 Edit Translation
                             </Button>
