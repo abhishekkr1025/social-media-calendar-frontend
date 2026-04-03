@@ -22,7 +22,7 @@ export default function App() {
       <Routes>
         <Route element={<AppLayout />}>
 
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={<DashboardDummy />} />
         <Route path="/add-clients" element={<Onboarding />} />
         <Route path="/connect-success" element={<ConnectSuccess />} />
         <Route path="/connect-platform" element={<ConnectToPlatforms />} />

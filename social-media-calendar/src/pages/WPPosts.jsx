@@ -688,7 +688,7 @@ export default function WPPostsTest() {
                 </DialogActions>
             </Dialog>
         </div>
-    );
+    )
 }
 
 function StatusBadge({ status }) {

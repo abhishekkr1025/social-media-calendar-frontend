@@ -10,8 +10,9 @@ import {
 } from "lucide-react";
 import { SiWordpress } from "react-icons/si";
 
-const BASE_URL = "https://prod.panditjee.com";
-// const BASE_URL = "https://localhost:5000";
+// const BASE_URL = "https://prod.panditjee.com";
+// const PANDITJEE_BASE  = "https://prod.panditjee.com"
+const BASE_URL = "http://localhost:5000";
 const TELEGRAM_BOT_USERNAME = "cliqsocialbot"; // without @
 
 
@@ -24,7 +25,8 @@ const platforms = [
     { id: "youtube", label: "YouTube", icon: <Youtube className="w-5 h-5" />, color: "bg-red-600" },
     { id: "telegram", label: "Telegram", icon: <Send className="w-5 h-5" />, color: "bg-blue-400" },
     { id: "whatsapp", label: "WhatsApp Channel", icon: <MessageCircle className="w-5 h-5" />, color: "bg-green-500" },
-    { id: "wordpress", label: "WordPress Website", icon: <SiWordpress className="w-5 h-5" />, color: "bg-[#21759B]" }
+    { id: "wordpress", label: "WordPress Website", icon: <SiWordpress className="w-5 h-5" />, color: "bg-[#21759B]" },
+    { id: "panditjee", label: "Panditjee", icon: <Send />, color: "bg-orange-500" }
 ];
 
 export default function ConnectToPlatforms() {
@@ -33,6 +35,12 @@ export default function ConnectToPlatforms() {
     const [selectedClientId, setSelectedClientId] = useState(null);
     const [status, setStatus] = useState({});
     const [loading, setLoading] = useState(false);
+    const [showPanditjeeModal, setShowPanditjeeModal] = useState(false);
+    const [panditjeeData, setPanditjeeData] = useState({
+        phone: "",
+        otp: "",
+        step: 1
+    });
 
     const [showWPModal, setShowWPModal] = useState(false);
     const [wpData, setWpData] = useState({
@@ -102,6 +110,7 @@ export default function ConnectToPlatforms() {
                 const res = await fetch(`${BASE_URL}/api/clients/${clientId}/${p.id}/account`);
                 const data = await res.json();
                 console.log(`clientId: ${clientId}`)
+                console.log(`${BASE_URL}/api/clients/${clientId}/${p.id}/account`)
                 // console.log(data)
                 // Connected if response is OK AND data array is not empty
                 // newStatus[p.id] = res.ok && data && data.length !== 0;
@@ -110,10 +119,11 @@ export default function ConnectToPlatforms() {
                 //      newStatus[p.id] = res.ok && data && data.sites.length>0;
                 // }
 
-                if (p.id === "wordpress") {
+                if (p.id === "wordpress" || p.id === "panditjee") {
                     // ✅ WordPress uses `connected` flag
                     newStatus[p.id] = res.ok && data?.connected === true;
-                } else {
+                }
+                 else {
                     // ✅ Other platforms: object presence is enough
                     newStatus[p.id] = res.ok && data && data.length !== 0;
                 }
@@ -137,6 +147,11 @@ export default function ConnectToPlatforms() {
 
         if (platform === "wordpress") {
             setShowWPModal(true);
+            return;
+        }
+
+        if (platform === "panditjee") {
+            setShowPanditjeeModal(true);
             return;
         }
 
@@ -428,6 +443,108 @@ export default function ConnectToPlatforms() {
                     </div>
                 </div>
             )}
+
+            {showPanditjeeModal && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+    <div className="bg-white p-6 rounded-lg w-96">
+
+      <h2 className="text-lg font-semibold mb-3">
+        Connect Panditjee
+      </h2>
+
+      {panditjeeData.step === 1 && (
+        <>
+          <input
+            className="border p-2 w-full mb-3"
+            placeholder="+91XXXXXXXXXX"
+            value={panditjeeData.phone}
+            onChange={(e) =>
+              setPanditjeeData({ ...panditjeeData, phone: e.target.value })
+            }
+          />
+
+          <Button
+            className="w-full"
+            onClick={async () => {
+              const res = await fetch(`${BASE_URL}/api/panditjee/connect`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  clientId: selectedClientId,
+                  phone: panditjeeData.phone
+                })
+              });
+
+              if (res.ok) {
+                alert("OTP sent!");
+                setPanditjeeData({ ...panditjeeData, step: 2 });
+              } else {
+                alert("Failed to send OTP");
+              }
+            }}
+          >
+            Send OTP
+          </Button>
+        </>
+      )}
+
+      {panditjeeData.step === 2 && (
+        <>
+          <input
+            className="border p-2 w-full mb-3"
+            placeholder="Enter OTP"
+            value={panditjeeData.otp}
+            onChange={(e) =>
+              setPanditjeeData({ ...panditjeeData, otp: e.target.value })
+            }
+          />
+
+          <Button
+            className="w-full"
+            onClick={async () => {
+              const res = await fetch(`${BASE_URL}/api/panditjee/verify`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  clientId: selectedClientId,
+                  phone: panditjeeData.phone,
+                  otp: panditjeeData.otp
+                })
+              });
+
+              const data = await res.json();
+              console.log(data.data);
+
+              if (data.success) {
+                alert("🎉 Panditjee Connected!");
+                setShowPanditjeeModal(false);
+                setPanditjeeData({ phone: "", otp: "", step: 1 });
+                loadPlatformStatus(selectedClientId);
+              } else {
+                alert("❌ Invalid OTP");
+              }
+            }}
+          >
+            Verify OTP
+          </Button>
+        </>
+      )}
+
+      <div className="flex justify-end mt-3">
+        <Button
+          variant="outline"
+          onClick={() => {
+            setShowPanditjeeModal(false);
+            setPanditjeeData({ phone: "", otp: "", step: 1 });
+          }}
+        >
+          Cancel
+        </Button>
+      </div>
+
+    </div>
+  </div>
+)}
 
         </div>
     );

@@ -1,3 +1,8 @@
+// ============================================================
+// DASHBOARD.JSX  –  diff-friendly: only the changed sections
+// are shown with full context. Search for ← NEW to find them.
+// ============================================================
+
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button.jsx'
 import { Input } from '@/components/ui/input.jsx'
@@ -19,10 +24,11 @@ import MenuIcon from "@mui/icons-material/Menu";
 import { IconButton, Toolbar } from "@mui/material";
 import Sidebar from "@/components/Sidebar";
 import { Telegram } from '@mui/icons-material'
-import BottomSheetScheduler from '@/components/BottomSheetScheduler'
 
-
-
+// ── NEW: Panditjee icon ─────────────────────────────────────
+const PanditjeeIcon = () => (
+  <span style={{ fontWeight: 700, fontSize: 14 }}>P</span>
+);
 
 function DashboardDummy() {
     const [clients, setClients] = useState([])
@@ -38,22 +44,26 @@ function DashboardDummy() {
     const [calendarDate, setCalendarDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(null);
     const [isSchedulerOpen, setIsSchedulerOpen] = useState(false);
-    const [monthDirection, setMonthDirection] = useState("next"); // "next" | "prev"
+    const [monthDirection, setMonthDirection] = useState("next");
     const [rawPosts, setRawPosts] = useState([]);
     const [isClosing, setIsClosing] = useState(false);
     const [isWpSchedulerOpen, setIsWpSchedulerOpen] = useState(false);
+    // "social" | "blog" | "panditjee"  ← NEW option
     const [schedulerType, setSchedulerType] = useState("social");
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [wpCategories, setWpCategories] = useState([]);
     const [masterCategories, setMasterCategories] = useState([]);
+    const [wpPosts, setWpPosts] = useState([]);
 
-
-    // "social" | "blog"
-
-
-
-
-
+    // ── NEW: Panditjee post state ────────────────────────────
+    const [panditjeePost, setPanditjeePost] = useState({
+        content: "",   // caption
+        date: "",
+        time: "",
+        image: null
+    });
+    // ── NEW: Panditjee categories fetched from your backend ──
+    // const [panditjeeCategories, setPanditjeeCategories] = useState([]);
 
     const [newPost, setNewPost] = useState({
         content: '',
@@ -63,21 +73,20 @@ function DashboardDummy() {
         file: null
     })
 
-const [wpPost, setWpPost] = useState({
-    title: "",
-    content: "",
-    excerpt: "",
-    date: "",
-    time: "",
-    file: null,
-    featured_image: null,
-    wpStatus: "publish",
-    language: "",
-    master_category_id: "",
-    slug: "",    // ← ADD
-    tags: "",    // ← ADD
-});
-
+    const [wpPost, setWpPost] = useState({
+        title: "",
+        content: "",
+        excerpt: "",
+        date: "",
+        time: "",
+        file: null,
+        featured_image: null,
+        wpStatus: "publish",
+        language: "",
+        master_category_id: "",
+        slug: "",
+        tags: "",
+    });
 
     const {
         page: queuedPage,
@@ -98,10 +107,19 @@ const [wpPost, setWpPost] = useState({
         { label: "Gujarati", value: "Gujarati" }
     ];
 
-
-
     // const BASE_URL = "https://prod.panditjee.com";
-    const BASE_URL = "http://localhost:5000";
+    const BASE_URL = "http://localhost:5000"
+
+    // ── NEW: fetch Panditjee categories when client changes ──
+    // useEffect(() => {
+    //     if (!selectedClient) return;
+    //     fetch(`${BASE_URL}/api/panditjee/categories?clientId=${selectedClient.id}`)
+    //         .then(res => res.json())
+    //         .then(data => {
+    //             if (Array.isArray(data)) setPanditjeeCategories(data);
+    //         })
+    //         .catch(() => {});
+    // }, [selectedClient]);
 
     const fetchClients = async () => {
         try {
@@ -113,184 +131,170 @@ const [wpPost, setWpPost] = useState({
         }
     };
 
+    async function loadWpPostsForCalendar() {
+        const res = await fetch(`${BASE_URL}/api/wp-posts`);
+        const data = await res.json();
+        const formatted = data.map(p => {
+            const dt = new Date(p.scheduled_at);
+            return {
+                id: `wp-${p.id}`,
+                date: toLocalDateString(dt),
+                time: dt.toISOString().split("T")[1].slice(0, 5),
+                title: p.title,
+                type: 'wp',
+                status: p.status,
+                language: p.language,
+            };
+        });
+        setWpPosts(formatted);
+    }
+
     useEffect(() => {
         loadQueued();
         loadPublished();
         fetchClients();
         loadAllPosts();
+        loadWpPostsForCalendar();
     }, [selectedClient]);
-
 
     useEffect(() => {
         if (!clients.length || !rawPosts.length) return;
-
         const formatted = rawPosts.map(p => {
             const dt = new Date(p.scheduled_at);
             return {
                 ...p,
                 date: toLocalDateString(dt),
                 time: dt.toISOString().split("T")[1].slice(0, 5),
-                clientName:
-                    clients.find(c => c.id === p.clientId)?.name || "Client"
+                clientName: clients.find(c => c.id === p.clientId)?.name || "Client"
             };
         });
-
         setPosts(formatted);
     }, [clients, rawPosts]);
 
-//     useEffect(() => {
-//   if (!selectedClient || !wpPost.language) return;
+    useEffect(() => {
+        fetch(`${BASE_URL}/api/master-categories`)
+            .then(res => res.json())
+            .then(setMasterCategories);
+    }, []);
 
-//   fetch(
-//     `${BASE_URL}/api/master-categories/by-client-language?client_id=${selectedClient.id}&language=${wpPost.language}`
-//   )
-//     .then(res => res.json())
-//     .then(data => setWpCategories(data))
-//     .catch(err => console.error("Failed to load categories", err));
-
-// }, [selectedClient, wpPost.language]);
-
-useEffect(() => {
-  fetch(`${BASE_URL}/api/master-categories`)
-    .then(res => res.json())
-    .then(setMasterCategories);
-}, []);
-
-
-
-
-const scheduleWordPressPost = async () => {
+    // ── NEW: Schedule a Panditjee post ───────────────────────
+    const schedulePanditjeePost = async () => {
     if (!selectedClient) {
         showWarning("Please select a client");
         return;
     }
 
-    if (!wpPost.title || !wpPost.content) {
-        showWarning("Title and content are required");
+    if (!panditjeePost.content) {
+        showWarning("Caption is required");
         return;
     }
 
-    if (!wpPost.date || !wpPost.time) {
+    if (!panditjeePost.date || !panditjeePost.time) {
         showWarning("Please select date and time");
         return;
     }
 
-    const scheduled_at = `${wpPost.date} ${wpPost.time}:00`;
+    const scheduled_at = `${panditjeePost.date} ${panditjeePost.time}:00`;
 
     const formData = new FormData();
     formData.append("clientId", selectedClient.id);
-    formData.append("title", wpPost.title);
-    formData.append("content", wpPost.content);
-    formData.append("excerpt", wpPost.excerpt || "");
-    formData.append("scheduled_at", scheduled_at);
-    formData.append("status", "scheduled");
-    formData.append("language", wpPost.language);
-    formData.append("master_category_id", wpPost.master_category_id);
-    formData.append("slug", wpPost.slug || "");
-    formData.append("tags", wpPost.tags || "");
 
-    // ← FIXED: was wpPost.file, now wpPost.featured_image
-    if (wpPost.featured_image) {
-        formData.append("featured_image", wpPost.featured_image);
+    // ✅ IMPORTANT: use caption only
+    formData.append("caption", panditjeePost.content);
+
+    formData.append("scheduled_at", scheduled_at);
+    formData.append("platform", "panditjee"); // 👈 important for worker
+
+    if (panditjeePost.image) {
+        formData.append("file", panditjeePost.image);
     }
 
-    const res = await fetch(`${BASE_URL}/api/wp-posts`, {
+    const res = await fetch(`${BASE_URL}/api/panditjee/post`, {
         method: "POST",
         body: formData
     });
 
     if (!res.ok) {
-        const err = await res.text();
-        console.error(err);
-        showError("Failed to schedule blog post");
+        showError("Failed to schedule Panditjee post");
         return;
     }
 
-    showSuccess("Blog Added Successfully!");
-
-    // Reset featured_image after success
-    setWpPost(prev => ({ ...prev, featured_image: null }));
+    showSuccess("Panditjee post scheduled!");
+    setPanditjeePost({
+        title: "",
+        content: "",
+        date: "",
+        time: "",
+        category: "",
+        image: null
+    });
 
     closeScheduler();
 };
 
+    const scheduleWordPressPost = async () => {
+        if (!selectedClient) { showWarning("Please select a client"); return; }
+        if (!wpPost.title || !wpPost.content) { showWarning("Title and content are required"); return; }
+        if (!wpPost.date || !wpPost.time) { showWarning("Please select date and time"); return; }
 
+        const scheduled_at = `${wpPost.date} ${wpPost.time}:00`;
+        const formData = new FormData();
+        formData.append("clientId", selectedClient.id);
+        formData.append("title", wpPost.title);
+        formData.append("content", wpPost.content);
+        formData.append("excerpt", wpPost.excerpt || "");
+        formData.append("scheduled_at", scheduled_at);
+        formData.append("status", "scheduled");
+        formData.append("language", wpPost.language);
+        formData.append("master_category_id", wpPost.master_category_id);
+        formData.append("slug", wpPost.slug || "");
+        formData.append("tags", wpPost.tags || "");
+        if (wpPost.featured_image) formData.append("featured_image", wpPost.featured_image);
 
+        const res = await fetch(`${BASE_URL}/api/wp-posts`, { method: "POST", body: formData });
+        if (!res.ok) { showError("Failed to schedule blog post"); return; }
 
+        showSuccess("Blog Added Successfully!");
+        setWpPost(prev => ({ ...prev, featured_image: null }));
+        closeScheduler();
+    };
 
-
-
-    const handleAddClient = async () => {
-        navigate("/onboard");
-    }
-
-    const handleConnectButton = async () => {
-        navigate("/connect-platform");
-    }
+    const handleAddClient = async () => { navigate("/onboard"); }
+    const handleConnectButton = async () => { navigate("/connect-platform"); }
 
     const closeScheduler = () => {
         setIsClosing(true);
-        // inside closeScheduler or after showSuccess
         setWpPost(prev => ({ ...prev, slug: "", tags: "", featured_image: null }));
-
-        // wait for animation to finish
         setTimeout(() => {
             setIsSchedulerOpen(false);
             setIsClosing(false);
-        }, 200); // must match animation duration
+        }, 200);
     };
-
-    const loadWpPosts = async () => {
-        const res = await fetch(`${BASE_URL}/api/wp-posts`);
-        const data = await res.json();
-        setWpPosts(data);
-    };
-
 
     async function loadAllPosts() {
         const res = await fetch(`${BASE_URL}/api/posts/all`);
         const data = await res.json();
-
         if (data.success) {
             setRawPosts(data.posts);
             setQueuedPosts(data.queued_posts || []);
         }
     }
 
-
-
-
     async function loadQueued() {
-        const url = selectedClient && selectedClient.id
+        const url = selectedClient?.id
             ? `${BASE_URL}/api/queued/${selectedClient.id}`
             : `${BASE_URL}/api/queued-posts`;
-
         const res = await fetch(url);
-        const data = await res.json();
-        // console.log(data)
-        setQueuedPosts(data);
+        setQueuedPosts(await res.json());
     }
-
 
     async function loadPublished() {
-        const url = selectedClient && selectedClient.id
+        const url = selectedClient?.id
             ? `${BASE_URL}/api/published-posts/${selectedClient.id}`
             : `${BASE_URL}/api/published-posts`;
-
         const res = await fetch(url);
-        const data = await res.json();
-        setPublishedPosts(data);
+        setPublishedPosts(await res.json());
     }
-
-
-
-
-
-
-
-
-
-
 
     const platformIcons = {
         facebook: <Facebook className="w-4 h-4" />,
@@ -299,7 +303,8 @@ const scheduleWordPressPost = async () => {
         linkedin: <Linkedin className="w-4 h-4" />,
         youtube: <Youtube className="w-4 h-4" />,
         wordpress: <SiWordpress className='w-4 h-4' />,
-        telegram: <Send className="w-5 h-5" />
+        telegram: <Send className="w-5 h-5" />,
+        panditjee: <PanditjeeIcon />,   // ← NEW
     }
 
     const platformColors = {
@@ -309,8 +314,8 @@ const scheduleWordPressPost = async () => {
         linkedin: 'bg-blue-700',
         youtube: 'bg-red-500',
         wordpress: 'bg-blue-500',
-        telegram: 'bg-sky-500'
-
+        telegram: 'bg-sky-500',
+        panditjee: 'bg-orange-500',     // ← NEW
     }
 
     function toLocalDateString(date) {
@@ -320,74 +325,28 @@ const scheduleWordPressPost = async () => {
         return `${y}-${m}-${d}`;
     }
 
-
-
-
     const addClient = async () => {
-        if (!newClient.trim()) showWarning("Please enter a client name");
-
+        if (!newClient.trim()) { showWarning("Please enter a client name"); return; }
         try {
             const response = await fetch(`${BASE_URL}/api/clients`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: newClient, email: "" }) // optional email field
+                body: JSON.stringify({ name: newClient, email: "" })
             });
-
             if (!response.ok) throw new Error("Failed to add client");
-
-            const data = await response.json();
-            console.log("Client added:", data);
-
-            // refresh client list from DB
             await fetchClients();
-
             setNewClient("");
             setShowAddClient(false);
         } catch (err) {
-            console.error("Error adding client:", err);
             showWarning("Failed to add client");
         }
     };
 
-
-
-
-
-
     const addPost = async () => {
-        console.log("function called");
-        var isTrue = selectedClient &&
-            newPost.content &&
-            newPost.date &&
-            newPost.time &&
-            newPost.platforms.length > 0;
-
-        console.log("VALIDATION DEBUG", {
-            selectedClient,
-            content: newPost.content,
-            date: newPost.date,
-            time: newPost.time,
-            platforms: newPost.platforms
-        });
-
-
-        console.log("Validation:", isTrue);
-
+        const isTrue = selectedClient && newPost.content && newPost.date && newPost.time && newPost.platforms.length > 0;
         if (isTrue) {
             try {
-                // const imageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROdPJYVL1V2HvDgFjqF5xm0l5WuZCnS5QrSw&s";
-
-                if (!newPost.date || !newPost.time) {
-                    showWarning("Please select a date and time");
-                    return;
-                }
-
                 const scheduled_at = `${newPost.date} ${newPost.time}:00`;
-
-
-
-
-
                 const formData = new FormData();
                 formData.append("clientId", selectedClient.id);
                 formData.append("title", newPost.content);
@@ -396,53 +355,19 @@ const scheduleWordPressPost = async () => {
                 formData.append("platforms", JSON.stringify(newPost.platforms));
                 formData.append("file", newPost.file);
 
-                console.log("formdata: ", JSON.stringify(formData));
-
-                console.log(formData.get("scheduled_at"))
-
-                const response = await fetch(`${BASE_URL}/api/posts`, {
-                    method: "POST",
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    throw new Error("Failed to save post");
-                }
+                const response = await fetch(`${BASE_URL}/api/posts`, { method: "POST", body: formData });
+                if (!response.ok) throw new Error("Failed to save post");
 
                 closeScheduler();
+                showSuccess(`Post Added on ${newPost.platforms}`);
 
-
-                const result = await response.json();
-                console.log("✅ Post saved:", result);
-
-                showSuccess(`Post Added on ${newPost.platforms}`)
-
-                // 2️⃣ Fetch updated posts from database
                 const postsRes = await fetch(`${BASE_URL}/api/posts/all`);
                 const updatedPosts = await postsRes.json();
+                if (Array.isArray(updatedPosts)) setPosts(updatedPosts);
 
-                if (Array.isArray(updatedPosts)) {
-                    setPosts(updatedPosts);
-                    console.log("✅ Posts refreshed:", updatedPosts);
-                }
-
-                // 3️⃣ Reset form
                 setNewPost({ content: '', date: '', time: '', platforms: [] });
                 setShowAddPost(false);
-
-
-                // 🟣 4️⃣ Try posting to Instagram if selected
-
-
-
-
-
-
-
-
-
             } catch (error) {
-                console.error("❌ Error adding post:", error);
                 showWarning("Failed to save post. Check console for details.");
             }
         } else {
@@ -450,144 +375,60 @@ const scheduleWordPressPost = async () => {
         }
     };
 
-
     const deletePost = async (postId) => {
-        // Confirm before deleting
-        // if (!window.confirm("Are you sure you want to delete this post?")) {
-        //   return;
-        // }
-
         try {
-            console.log("🗑️ Deleting post:", postId);
-
-            const response = await fetch(`${BASE_URL}/api/deletePosts/${postId}`, {
-                method: "DELETE",
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            });
-
-
-
-            if (!response.ok) {
-                throw new Error("Failed to delete post");
-            }
-
-            const result = await response.json();
-            console.log("✅ Post deleted:", result);
-
-            // Update the posts state to remove the deleted post
+            const response = await fetch(`${BASE_URL}/api/deletePosts/${postId}`, { method: "DELETE" });
+            if (!response.ok) throw new Error("Failed to delete post");
             setPosts(posts.filter(post => post.id !== postId));
-
-            // Optional: Show success message
-            showSuccess("Post deleted successfully!")
-
-
+            showSuccess("Post deleted successfully!");
         } catch (error) {
-            console.error("❌ Error deleting post:", error);
-            showError("Failed to delete post. Check console for details.")
+            showError("Failed to delete post.");
         }
     };
 
     const goToPrevMonth = () => {
         setMonthDirection("prev");
-        setCalendarDate(prev =>
-            new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
-        );
+        setCalendarDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
     };
 
     const goToNextMonth = () => {
         setMonthDirection("next");
-        setCalendarDate(prev =>
-            new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
-        );
+        setCalendarDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
     };
-
 
     const handleDragEnd = async (event) => {
         const { active, over } = event;
-
-        // Dropped outside any valid cell
         if (!over) return;
-
-        const postId = active.id;      // post id
-        const newDate = over.id;       // YYYY-MM-DD
-
-        // No change
+        const postId = active.id;
+        const newDate = over.id;
         const post = posts.find(p => p.id === postId);
         if (!post || post.date === newDate) return;
-
-        // 🔹 Update UI immediately (optimistic update)
-        setPosts(prev =>
-            prev.map(p =>
-                p.id === postId
-                    ? { ...p, date: newDate }
-                    : p
-            )
-        );
-
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, date: newDate } : p));
         try {
-            // 🔹 Persist to backend
             await fetch(`${BASE_URL}/api/posts/${postId}/reschedule`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ date: newDate })
             });
-        } catch (err) {
-            console.error("Failed to reschedule post", err);
-        }
+        } catch (err) { console.error("Failed to reschedule post", err); }
     };
-
-
 
     const deleteClient = async (clientId) => {
-        if (!window.confirm("Are you sure you want to delete this client?")) {
-            return;
-        }
-
+        if (!window.confirm("Are you sure you want to delete this client?")) return;
         try {
-            console.log("🗑️ Deleting client:", clientId);
-            const url = `${BASE_URL}/api/deleteClient/${clientId}`;
-            console.log("📍 URL:", url);
-
-            const response = await fetch(url, {
+            const response = await fetch(`${BASE_URL}/api/deleteClient/${clientId}`, {
                 method: "DELETE",
-                headers: {
-                    "Content-Type": "application/json"
-                }
+                headers: { "Content-Type": "application/json" }
             });
-
-            console.log("📡 Response status:", response.status);
-            console.log(response.json);
-            console.log("📡 Response content-type:", response.headers.get('content-type'));
-
-            // Get the response text to see what's actually being returned
             const responseText = await response.text();
-            console.log("📄 Response body:", responseText);
-
-            // Try to parse as JSON
-            let result;
-            try {
-                result = JSON.parse(responseText);
-            } catch (e) {
-                console.error("❌ Response is not JSON:", responseText.substring(0, 200));
-                throw new Error("Server returned HTML instead of JSON. Check if backend is running.");
-            }
-
-            if (!response.ok) {
-                throw new Error(result.error || "Failed to delete client");
-            }
-
-            console.log("✅ Client deleted:", result);
+            const result = JSON.parse(responseText);
+            if (!response.ok) throw new Error(result.error || "Failed to delete client");
             setClients(prevClients => prevClients.filter(client => client.id !== clientId));
-            showSuccess("Client deleted successfully!")
-
+            showSuccess("Client deleted successfully!");
         } catch (error) {
-            console.error("❌ Error deleting client:", error);
-            showError(`Failed to delete client: ${error.message}`)
+            showError(`Failed to delete client: ${error.message}`);
         }
     };
-
 
     const togglePlatform = (platform) => {
         setNewPost(prev => ({
@@ -601,16 +442,11 @@ const scheduleWordPressPost = async () => {
     const exportToCSV = () => {
         const headers = ['Client', 'Date', 'Time', 'Content', 'Platforms']
         const rows = posts.map(post => [
-            post.clientName,
-            post.date,
-            post.time,
-            `"${post.content.replace(/"/g, '""')}"`,
-            post.platforms.join('; ')
+            post.clientName, post.date, post.time,
+            `"${post.content?.replace(/"/g, '""')}"`,
+            post.platforms?.join('; ')
         ])
-
-        const csv = [headers, ...rows].map(row => row.join(','))
-            .join('\n')
-
+        const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
         const blob = new Blob([csv], { type: 'text/csv' })
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -623,149 +459,368 @@ const scheduleWordPressPost = async () => {
     const getPostsByDate = () => {
         const postsByDate = {}
         posts.forEach(post => {
-            if (!postsByDate[post.date]) {
-                postsByDate[post.date] = []
-            }
+            if (!postsByDate[post.date]) postsByDate[post.date] = []
             postsByDate[post.date].push(post)
         })
         return postsByDate
     }
 
-    const sortedDates = Object.keys(getPostsByDate()).sort()
-
     const filteredPosts = selectedClient
         ? posts.filter(p => p.clientId === selectedClient.id)
         : posts
 
-
     const {
-        page: schedPage,
-        setPage: setSchedPage,
-        pageSize: schedPageSize,
-        setPageSize: setSchedPageSize,
-        totalPages: schedTotalPages,
-        paginatedData: paginatedScheduledPosts
+        page: schedPage, setPage: setSchedPage,
+        pageSize: schedPageSize, setPageSize: setSchedPageSize,
+        totalPages: schedTotalPages, paginatedData: paginatedScheduledPosts
     } = usePagination(filteredPosts, 5);
 
-
     const {
-        page: pubPage,
-        setPage: setPubPage,
-        pageSize: pubPageSize,
-        setPageSize: setPubPageSize,
-        totalPages: pubTotalPages,
-        paginatedData: paginatedPublishedPosts
+        page: pubPage, setPage: setPubPage,
+        pageSize: pubPageSize, setPageSize: setPubPageSize,
+        totalPages: pubTotalPages, paginatedData: paginatedPublishedPosts
     } = usePagination(publishedPosts, 5);
-
-
 
     return (
         <div className="flex min-h-screen">
-            {/* MUI Sidebar */}
-
-
-            {/* Main Content */}
-            <div
-                className={`flex-1 transition-all duration-300 ${sidebarOpen ? "ml-[10px]" : "ml-0"
-                    }`}
-            >
-                {/* Header */}
-
-
+            <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? "ml-[10px]" : "ml-0"}`}>
                 <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                        {/* Sidebar - Clients */}
-
-
-                        {/* Main Content */}
                         <div className="lg:col-span-8 space-y-6">
-                            {/* Add Post Section */}
-                         <BottomSheetScheduler
-    isOpen={isSchedulerOpen}
-    onClose={() => setIsSchedulerOpen(false)}
-    selectedDate={selectedDate}
-    clients={clients}
-    selectedClient={selectedClient}
-    onSelectClient={setSelectedClient}
-    masterCategories={masterCategories}
-    onPostScheduled={loadAllPosts}
-/>
 
+                            {/* ── SCHEDULER MODAL ────────────────────────── */}
+                            {isSchedulerOpen && (
+                                <div
+                                    className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 transition-opacity duration-200 ${isClosing ? "opacity-0" : "opacity-100"}`}
+                                    onClick={closeScheduler}
+                                >
+                                    <Card
+                                        className={`w-full max-w-lg max-h-[80vh] overflow-hidden transform transition-all duration-200 ${isClosing ? "scale-95 opacity-0" : "scale-100 opacity-100"}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <CardHeader>
+                                            <CardTitle>
+                                                Schedule{" "}
+                                                {schedulerType === "social" ? "Social Post"
+                                                    : schedulerType === "blog" ? "Blog Post"
+                                                    : "Panditjee Post"} — {selectedDate}
+                                            </CardTitle>
+                                        </CardHeader>
 
+                                        <CardContent className="space-y-4 overflow-y-auto max-h-[65vh] pr-2">
 
+                                            {/* ── TAB TOGGLE (now 3 tabs) ── */}
+                                            <div className="flex rounded-lg bg-gray-100 p-1">
+                                                <button
+                                                    className={`flex-1 py-2 rounded-md text-sm font-medium transition ${schedulerType === "social" ? "bg-white shadow text-blue-600" : "text-gray-500 hover:text-gray-700"}`}
+                                                    onClick={() => setSchedulerType("social")}
+                                                >
+                                                    Social Post
+                                                </button>
+                                                <button
+                                                    className={`flex-1 py-2 rounded-md text-sm font-medium transition ${schedulerType === "blog" ? "bg-white shadow text-purple-600" : "text-gray-500 hover:text-gray-700"}`}
+                                                    onClick={() => setSchedulerType("blog")}
+                                                >
+                                                    Blog Post
+                                                </button>
+                                                {/* ← NEW TAB */}
+                                                <button
+                                                    className={`flex-1 py-2 rounded-md text-sm font-medium transition ${schedulerType === "panditjee" ? "bg-white shadow text-orange-600" : "text-gray-500 hover:text-gray-700"}`}
+                                                    onClick={() => setSchedulerType("panditjee")}
+                                                >
+                                                    Panditjee
+                                                </button>
+                                            </div>
 
+                                            {/* ── CLIENT SELECTOR ── */}
+                                            <div>
+                                                <label className="text-sm font-medium">Client</label>
+                                                <div className="flex gap-2 flex-wrap mt-1">
+                                                    {clients.map((client) => (
+                                                        <Button
+                                                            key={client.id}
+                                                            size="sm"
+                                                            variant={selectedClient?.id === client.id ? "default" : "outline"}
+                                                            onClick={() => setSelectedClient(client)}
+                                                        >
+                                                            {client.name}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            </div>
 
+                                            {/* ── SOCIAL POST ── */}
+                                            {schedulerType === "social" && (
+                                                <>
+                                                    <Textarea
+                                                        placeholder="Post content"
+                                                        value={newPost.content}
+                                                        onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
+                                                    />
+                                                    <div>
+                                                        <label className="text-sm font-medium mb-1 block">Upload Image / Video</label>
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*,video/*"
+                                                            onChange={(e) => setNewPost({ ...newPost, file: e.target.files?.[0] || null })}
+                                                        />
+                                                    </div>
+                                                    <div className="flex gap-2 flex-wrap">
+                                                        {Object.keys(platformIcons)
+                                                            .filter(p => p !== "wordpress" && p !== "panditjee")
+                                                            .map((platform) => (
+                                                                <Button
+                                                                    key={platform}
+                                                                    size="sm"
+                                                                    variant={newPost.platforms.includes(platform) ? "default" : "outline"}
+                                                                    onClick={() => togglePlatform(platform)}
+                                                                >
+                                                                    {platformIcons[platform]} {platform}
+                                                                </Button>
+                                                            ))}
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            {/* ── BLOG POST (WORDPRESS) ── */}
+                                            {schedulerType === "blog" && (
+                                                <>
+                                                    <div>
+                                                        <label className="text-sm font-medium mb-1 block">Blog Language</label>
+                                                        <select
+                                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                            value={wpPost.language}
+                                                            onChange={(e) => setWpPost({ ...wpPost, language: e.target.value })}
+                                                        >
+                                                            {BLOG_LANGUAGES.map(lang => (
+                                                                <option key={lang.value} value={lang.value}>{lang.label}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-sm font-medium mb-1 block">Category</label>
+                                                        <select
+                                                            className="w-full border rounded-md px-3 py-2 text-sm"
+                                                            value={wpPost.master_category_id}
+                                                            onChange={(e) => setWpPost({ ...wpPost, master_category_id: e.target.value })}
+                                                        >
+                                                            <option value="">Select Category</option>
+                                                            {masterCategories.map(cat => (
+                                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-sm font-medium mb-1 block">
+                                                            Featured Image <span className="text-gray-400 font-normal">(optional)</span>
+                                                        </label>
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={(e) => setWpPost({ ...wpPost, featured_image: e.target.files?.[0] || null })}
+                                                            className="w-full text-sm border border-gray-300 rounded-md px-3 py-2"
+                                                        />
+                                                        {wpPost.featured_image && (
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <span className="text-xs text-green-600">✓ {wpPost.featured_image.name}</span>
+                                                                <button className="text-xs text-red-500 hover:underline" onClick={() => setWpPost({ ...wpPost, featured_image: null })}>Remove</button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <label className="text-sm font-medium mb-1 block">Blog Title</label>
+                                                    <Input
+                                                        placeholder="Blog title"
+                                                        value={wpPost.title}
+                                                        onChange={(e) => setWpPost({ ...wpPost, title: e.target.value })}
+                                                    />
+                                                    <label className="text-sm font-medium mb-1 block">Blog Content</label>
+                                                    <Textarea
+                                                        placeholder="Write your blog content..."
+                                                        rows={6}
+                                                        value={wpPost.content}
+                                                        onChange={(e) => setWpPost({ ...wpPost, content: e.target.value })}
+                                                    />
+                                                    <div>
+                                                        <label className="text-sm font-medium mb-1 block">
+                                                            Slug <span className="text-gray-400 font-normal text-xs">(optional)</span>
+                                                        </label>
+                                                        <div className="flex items-center border border-gray-300 rounded-md overflow-hidden">
+                                                            <span className="bg-gray-50 px-3 py-2 text-xs text-gray-400 border-r border-gray-300 whitespace-nowrap">/article/</span>
+                                                            <input
+                                                                type="text"
+                                                                value={wpPost.slug}
+                                                                onChange={e => setWpPost({ ...wpPost, slug: e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") })}
+                                                                placeholder="my-post-slug"
+                                                                className="flex-1 px-3 py-2 text-sm focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-sm font-medium mb-1 block">
+                                                            Tags <span className="text-gray-400 font-normal text-xs">(optional — comma separated)</span>
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={wpPost.tags}
+                                                            onChange={e => setWpPost({ ...wpPost, tags: e.target.value })}
+                                                            placeholder="politics, india, news"
+                                                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none"
+                                                        />
+                                                        {wpPost.tags && (
+                                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                                {wpPost.tags.split(",").map(t => t.trim()).filter(Boolean).map((tag, i) => (
+                                                                    <span key={i} className="bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5 text-xs">#{tag}</span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            {/* ── PANDITJEE POST (NEW) ── */}
+                                            {schedulerType === "panditjee" && (
+                                                <>
+                                                    {/* Caption */}
+                                                    <div>
+                                                        <label className="text-sm font-medium mb-1 block">
+                                                            Caption
+                                                        </label>
+                                                        <Textarea
+                                                            placeholder="Write your caption..."
+                                                            rows={4}
+                                                            value={panditjeePost.content}
+                                                            onChange={(e) =>
+                                                                setPanditjeePost({
+                                                                    ...panditjeePost,
+                                                                    content: e.target.value
+                                                                })
+                                                            }
+                                                        />
+                                                    </div>
+
+                                                    {/* Image / Video Upload */}
+                                                    <div>
+                                                        <label className="text-sm font-medium mb-1 block">
+                                                            Upload Image / Video
+                                                        </label>
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*,video/*"
+                                                            className="w-full text-sm border border-gray-300 rounded-md px-3 py-2"
+                                                            onChange={(e) =>
+                                                                setPanditjeePost({
+                                                                    ...panditjeePost,
+                                                                    image: e.target.files?.[0] || null
+                                                                })
+                                                            }
+                                                        />
+
+                                                        {panditjeePost.image && (
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <span className="text-xs text-green-600">
+                                                                    ✓ {panditjeePost.image.name}
+                                                                </span>
+                                                                <button
+                                                                    className="text-xs text-red-500 hover:underline"
+                                                                    onClick={() =>
+                                                                        setPanditjeePost({
+                                                                            ...panditjeePost,
+                                                                            image: null
+                                                                        })
+                                                                    }
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Info Message */}
+                                                    {selectedClient && (
+                                                        <p className="text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded-md px-3 py-2">
+                                                            Posting as <strong>{selectedClient.name}</strong> on Panditjee
+                                                        </p>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {/* ── TIME PICKER ── */}
+                                            <Input
+                                                type="time"
+                                                value={
+                                                    schedulerType === "social"
+                                                        ? newPost.time
+                                                        : schedulerType === "blog"
+                                                        ? wpPost.time
+                                                        : panditjeePost.time
+                                                }
+                                                onChange={(e) => {
+                                                    if (schedulerType === "social") setNewPost({ ...newPost, time: e.target.value });
+                                                    else if (schedulerType === "blog") setWpPost({ ...wpPost, time: e.target.value });
+                                                    else setPanditjeePost({ ...panditjeePost, time: e.target.value });
+                                                }}
+                                            />
+
+                                            {/* ── ACTIONS ── */}
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    className="flex-1"
+                                                    onClick={() => {
+                                                        if (schedulerType === "social") addPost();
+                                                        else if (schedulerType === "blog") scheduleWordPressPost();
+                                                        else schedulePanditjeePost();
+                                                    }}
+                                                >
+                                                    Schedule{" "}
+                                                    {schedulerType === "social" ? "Post"
+                                                        : schedulerType === "blog" ? "Blog"
+                                                        : "on Panditjee"}
+                                                </Button>
+                                                <Button variant="outline" onClick={closeScheduler}>Cancel</Button>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            )}
+
+                            {/* ── MONTH NAV ── */}
                             <div className="flex items-center justify-between mb-4">
-                                <Button variant="outline" size="sm" onClick={goToPrevMonth}>
-                                    ←
-                                </Button>
-
+                                <Button variant="outline" size="sm" onClick={goToPrevMonth}>←</Button>
                                 <h2 className="text-lg font-semibold">
-                                    {calendarDate.toLocaleString("en-US", {
-                                        month: "long",
-                                        year: "numeric"
-                                    })}
+                                    {calendarDate.toLocaleString("en-US", { month: "long", year: "numeric" })}
                                 </h2>
-
-                                <Button variant="outline" size="sm" onClick={goToNextMonth}>
-                                    →
-                                </Button>
+                                <Button variant="outline" size="sm" onClick={goToNextMonth}>→</Button>
                             </div>
 
-
-
-
-
+                            {/* ── CALENDAR ── */}
                             <DndContext onDragEnd={handleDragEnd}>
                                 <div
                                     key={calendarDate.toISOString()}
-                                    className={`transition-all duration-300 ease-in-out
-    ${monthDirection === "next"
-                                            ? "animate-slide-left"
-                                            : "animate-slide-right"}
-  `}
+                                    className={`transition-all duration-300 ease-in-out ${monthDirection === "next" ? "animate-slide-left" : "animate-slide-right"}`}
                                 >
                                     <div className="w-full max-w-none">
                                         <MonthCalendar
                                             posts={filteredPosts}
+                                            wpPosts={wpPosts}
                                             calendarDate={calendarDate}
                                             onDateClick={(date) => {
                                                 setSelectedDate(date);
-
-                                                setNewPost(prev => ({
-                                                    ...prev,
-                                                    date,
-                                                    time: prev.time === "" ? "09:00" : prev.time
-                                                }));
-
-                                                // ✅ WordPress post (THIS WAS MISSING)
-                                                setWpPost(prev => ({
-                                                    ...prev,
-                                                    date,
-                                                    time: prev.time === "" ? "09:00" : prev.time
-
-                                                }));
-
-                                                if (!selectedClient && clients.length === 1) {
-                                                    setSelectedClient(clients[0]);
-                                                }
-
+                                                setNewPost(prev => ({ ...prev, date, time: prev.time || "09:00" }));
+                                                setWpPost(prev => ({ ...prev, date, time: prev.time || "09:00" }));
+                                                setPanditjeePost(prev => ({ ...prev, date, time: prev.time || "09:00" }));
+                                                if (!selectedClient && clients.length === 1) setSelectedClient(clients[0]);
                                                 setIsSchedulerOpen(true);
                                             }}
-
                                         />
                                     </div>
-
                                 </div>
                             </DndContext>
 
-
-                            {/* Posts Calendar View */}
+                            {/* ── SCHEDULED POSTS TABLE ── */}
                             <div>
                                 <h2 className="text-xl font-semibold mb-4">
                                     {selectedClient ? `${selectedClient.name}'s Schedule` : 'All Scheduled Posts'}
                                 </h2>
-
                                 {filteredPosts.length === 0 ? (
                                     <Card>
                                         <CardContent className="py-12 text-center">
@@ -774,90 +829,6 @@ const scheduleWordPressPost = async () => {
                                         </CardContent>
                                     </Card>
                                 ) : (
-                                    // <Card>
-                                    //   <CardContent className="p-0 overflow-x-auto">
-                                    //     <table className="w-full text-sm">
-                                    //       <thead className="bg-gray-50 border-b">
-                                    //         <tr>
-                                    //           <th className="px-4 py-3 text-left font-medium text-gray-600">Date</th>
-                                    //           <th className="px-4 py-3 text-left font-medium text-gray-600">Time</th>
-                                    //           <th className="px-4 py-3 text-left font-medium text-gray-600">Client</th>
-                                    //           <th className="px-4 py-3 text-left font-medium text-gray-600">Platforms</th>
-                                    //           <th className="px-4 py-3 text-left font-medium text-gray-600">Content</th>
-                                    //           <th className="px-4 py-3 text-right font-medium text-gray-600">Actions</th>
-                                    //         </tr>
-                                    //       </thead>
-
-                                    //       <tbody>
-                                    //         {filteredPosts
-                                    //           .sort(
-                                    //             (a, b) =>
-                                    //               `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)
-                                    //           )
-                                    //           .map(post => (
-                                    //             <tr
-                                    //               key={post.id}
-                                    //               className="border-b last:border-b-0 hover:bg-gray-50 transition"
-                                    //             >
-                                    //               {/* Date */}
-                                    //               <td className="px-4 py-3 whitespace-nowrap">
-                                    //                 {new Date(post.date + "T00:00:00").toLocaleDateString("en-US", {
-                                    //                   month: "short",
-                                    //                   day: "numeric",
-                                    //                   year: "numeric"
-                                    //                 })}
-                                    //               </td>
-
-                                    //               {/* Time */}
-                                    //               <td className="px-4 py-3 font-medium text-gray-700">
-                                    //                 {post.time}
-                                    //               </td>
-
-                                    //               {/* Client */}
-                                    //               <td className="px-4 py-3">
-                                    //                 <Badge className="bg-gradient-to-r from-blue-500 to-purple-600">
-                                    //                   {post.clientName}
-                                    //                 </Badge>
-                                    //               </td>
-
-                                    //               {/* Platforms */}
-                                    // <td className="px-4 py-3">
-                                    //   <div className="flex gap-1">
-                                    //     {post.platforms.map(platform => (
-                                    //       <div
-                                    //         key={platform}
-                                    //         className={`${platformColors[platform]} p-1.5 rounded text-white`}
-                                    //         title={platform}
-                                    //       >
-                                    //         {platformIcons[platform]}
-                                    //       </div>
-                                    //     ))}
-                                    //   </div>
-                                    // </td>
-
-                                    //               {/* Content */}
-                                    //               <td className="px-4 py-3 max-w-md truncate text-gray-700">
-                                    //                 {post.content}
-                                    //               </td>
-
-                                    //               {/* Actions */}
-                                    //               <td className="px-4 py-3 text-right">
-                                    //                 <Button
-                                    //                   size="sm"
-                                    //                   variant="ghost"
-                                    //                   onClick={() => deletePost(post.id)}
-                                    //                   className="hover:bg-red-50"
-                                    //                 >
-                                    //                   <Trash2 className="w-4 h-4 text-red-500" />
-                                    //                 </Button>
-                                    //               </td>
-                                    //             </tr>
-                                    //           ))}
-                                    //       </tbody>
-                                    //     </table>
-                                    //   </CardContent>
-                                    // </Card>
-
                                     <Card>
                                         <CardContent className="p-0 overflow-x-auto">
                                             <table className="w-full text-sm">
@@ -869,137 +840,45 @@ const scheduleWordPressPost = async () => {
                                                         <th className="px-4 py-3 text-left">Content</th>
                                                         <th className="px-4 py-3 text-left">Platforms</th>
                                                         <th className="px-4 py-3 text-left">Actions</th>
-
                                                     </tr>
                                                 </thead>
-
                                                 <tbody>
                                                     {paginatedScheduledPosts.map(post => (
                                                         <tr key={post.id} className="border-b hover:bg-gray-50">
                                                             <td className="px-4 py-3 font-medium">{post.clientName}</td>
                                                             <td className="px-4 py-3">{post.date}</td>
                                                             <td className="px-4 py-3">{post.time}</td>
-                                                            <td className="px-4 py-3 truncate max-w-sm">
-                                                                {post.caption}
-                                                            </td>
+                                                            <td className="px-4 py-3 truncate max-w-sm">{post.caption}</td>
                                                             <td className="px-4 py-3">
                                                                 <div className="flex gap-1">
-                                                                    {post.platforms.map(platform => (
-                                                                        <div
-                                                                            key={platform}
-                                                                            className={`${platformColors[platform]} p-1.5 rounded text-white`}
-                                                                            title={platform}
-                                                                        >
+                                                                    {post.platforms?.map(platform => (
+                                                                        <div key={platform} className={`${platformColors[platform]} p-1.5 rounded text-white`} title={platform}>
                                                                             {platformIcons[platform]}
                                                                         </div>
                                                                     ))}
                                                                 </div>
                                                             </td>
                                                             <td className="px-4 py-3">
-                                                                <button
-                                                                    onClick={() => {
-
-                                                                        deletePost(post.id);
-
-                                                                    }}
-                                                                    className="flex items-center gap-1 text-red-600 hover:text-red-800"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                    Delete
+                                                                <button onClick={() => deletePost(post.id)} className="flex items-center gap-1 text-red-600 hover:text-red-800">
+                                                                    <Trash2 className="w-4 h-4" /> Delete
                                                                 </button>
                                                             </td>
-
                                                         </tr>
                                                     ))}
                                                 </tbody>
                                             </table>
-
-                                            <TablePagination
-                                                page={schedPage}
-                                                totalPages={schedTotalPages}
-                                                pageSize={schedPageSize}
-                                                setPage={setSchedPage}
-                                                setPageSize={setSchedPageSize}
-                                            />
+                                            <TablePagination page={schedPage} totalPages={schedTotalPages} pageSize={schedPageSize} setPage={setSchedPage} setPageSize={setSchedPageSize} />
                                         </CardContent>
                                     </Card>
-
-
                                 )}
                             </div>
 
-
-                            {/* ================================
-    🚀 QUEUED POSTS (Worker Pending)
-   ================================ */}
+                            {/* ── QUEUED POSTS ── */}
                             <div className="mt-10">
-                                <h2 className="text-xl font-semibold mb-3">
-                                    Queued Posts (Waiting for Worker)
-                                </h2>
-
+                                <h2 className="text-xl font-semibold mb-3">Queued Posts (Waiting for Worker)</h2>
                                 {queuedPosts.length === 0 ? (
                                     <p className="text-gray-500">No queued posts found.</p>
                                 ) : (
-                                    // <Card>
-                                    //   <CardContent className="p-0 overflow-x-auto">
-
-
-                                    //     <table className="w-full text-sm">
-                                    //       <thead className="bg-gray-50 border-b">
-                                    //         <tr>
-                                    //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                                    //             Platform
-                                    //           </th>
-                                    //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                                    //             Caption
-                                    //           </th>
-                                    //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                                    //             Scheduled At
-                                    //           </th>
-                                    //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                                    //             Status
-                                    //           </th>
-                                    //         </tr>
-                                    //       </thead>
-                                    //       <tbody>
-                                    //         {paginatedData.map(q => (
-                                    //           <tr key={q.id} className="border-b">
-                                    //             <td className="px-4 py-3">{q.platform.toUpperCase()}</td>
-                                    //             <td className="px-4 py-3">{q.caption}</td>
-                                    // <td className="px-4 py-3 text-gray-600">
-                                    //   {new Date(q.scheduled_at).toLocaleString()}
-                                    // </td>
-                                    //         <td className="px-4 py-3">
-                                    //           <span
-                                    //             className={`
-                                    //   inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                                    //   ${q.status === "queued" && "bg-yellow-100 text-yellow-800"}
-                                    //   ${q.status === "processing" && "bg-blue-100 text-blue-800"}
-                                    //   ${q.status === "posted" && "bg-green-100 text-green-800"}
-                                    //   ${q.status === "failed" && "bg-red-100 text-red-800"}
-                                    // `}
-                                    //           >
-                                    //             {q.status}
-                                    //           </span>
-                                    //         </td>
-                                    //           </tr>
-                                    //         ))}
-                                    //       </tbody>
-
-
-                                    //     </table>
-
-                                    //     <TablePagination
-                                    //       page={page}
-                                    //       totalPages={totalPages}
-                                    //       pageSize={pageSize}
-                                    //       setPage={setPage}
-                                    //       setPageSize={setPageSize}
-                                    //     />
-
-                                    //   </CardContent>
-                                    // </Card>
-
                                     <Card>
                                         <CardContent className="p-0 overflow-x-auto">
                                             <table className="w-full text-sm">
@@ -1007,127 +886,37 @@ const scheduleWordPressPost = async () => {
                                                     <tr>
                                                         <th className="px-4 py-3 text-left">Platform</th>
                                                         <th className="px-4 py-3 text-left">Caption</th>
-                                                        <th className="px-4 py-3 text-left">Scheduled At</th>
                                                         <th className="px-4 py-3 text-left">Status</th>
+                                                        <th className="px-4 py-3 text-left">Scheduled At</th>
                                                     </tr>
                                                 </thead>
-
                                                 <tbody>
                                                     {paginatedQueuedPosts.map(q => (
                                                         <tr key={q.id} className="border-b hover:bg-gray-50">
-                                                            <td className="px-4 py-3 font-medium">
-                                                                {q.platform.toUpperCase()}
-                                                            </td>
-                                                            <td className="px-4 py-3 truncate max-w-md">
-                                                                {q.title}
-                                                            </td>
-
+                                                            <td className="px-4 py-3 font-medium">{q.platform?.toUpperCase()}</td>
+                                                            <td className="px-4 py-3 truncate max-w-md">{q.title}</td>
                                                             <td className="px-4 py-3">
-                                                                <span
-                                                                    className={`
-                      inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                      ${q.status === "queued" && "bg-yellow-100 text-yellow-800"}
-                      ${q.status === "processing" && "bg-blue-100 text-blue-800"}
-                      ${q.status === "posted" && "bg-green-100 text-green-800"}
-                      ${q.status === "failed" && "bg-red-100 text-red-800"}
-                    `}
-                                                                >
+                                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${q.status === "queued" && "bg-yellow-100 text-yellow-800"} ${q.status === "processing" && "bg-blue-100 text-blue-800"} ${q.status === "posted" && "bg-green-100 text-green-800"} ${q.status === "failed" && "bg-red-100 text-red-800"}`}>
                                                                     {q.status}
                                                                 </span>
                                                             </td>
-
-                                                            <td className="px-4 py-3 text-gray-600">
-                                                                {new Date(q.scheduled_at).toLocaleString()}
-                                                            </td>
+                                                            <td className="px-4 py-3 text-gray-600">{new Date(q.scheduled_at).toLocaleString()}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
                                             </table>
-
-                                            <TablePagination
-                                                page={queuedPage}
-                                                totalPages={queuedTotalPages}
-                                                pageSize={queuedPageSize}
-                                                setPage={setQueuedPage}
-                                                setPageSize={setQueuedPageSize}
-                                            />
+                                            <TablePagination page={queuedPage} totalPages={queuedTotalPages} pageSize={queuedPageSize} setPage={setQueuedPage} setPageSize={setQueuedPageSize} />
                                         </CardContent>
                                     </Card>
-
                                 )}
                             </div>
 
-                            {/* ================================
-    🟢 PUBLISHED POSTS HISTORY
-   ================================ */}
+                            {/* ── PUBLISHED POSTS ── */}
                             <div className="mt-10">
-                                <h2 className="text-xl font-semibold mb-3">
-                                    Published Posts (History)
-                                </h2>
-
+                                <h2 className="text-xl font-semibold mb-3">Published Posts (History)</h2>
                                 {publishedPosts.length === 0 ? (
                                     <p className="text-gray-500">No published posts yet.</p>
                                 ) : (
-                                    // <Card>
-                                    //   <CardContent className="p-0 overflow-x-auto">
-                                    //     <table className="w-full text-sm">
-                                    //       <thead className="bg-gray-50 border-b">
-                                    //         <tr>
-                                    //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                                    //             Platform
-                                    //           </th>
-                                    //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                                    //             Caption
-                                    //           </th>
-                                    //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                                    //             Status
-                                    //           </th>
-                                    //           <th className="px-4 py-3 text-left font-medium text-gray-600">
-                                    //             Posted At
-                                    //           </th>
-                                    //         </tr>
-                                    //       </thead>
-
-                                    //       <tbody>
-                                    //         {publishedPosts.map(p => (
-                                    //           <tr
-                                    //             key={p.id}
-                                    //             className="border-b last:border-b-0 hover:bg-gray-50 transition"
-                                    //           >
-                                    //             {/* Platform */}
-                                    //             <td className="px-4 py-3 font-medium">
-                                    //               {p.platform.toUpperCase()}
-                                    //             </td>
-
-                                    //             {/* Caption */}
-                                    //             <td className="px-4 py-3 text-gray-700 max-w-md truncate">
-                                    //               {p.caption || "-"}
-                                    //             </td>
-
-                                    //             {/* Status */}
-                                    //             <td className="px-4 py-3">
-                                    //               <span
-                                    //                 className={`
-                                    //       inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                                    //       ${p.status === "success" && "bg-green-100 text-green-800"}
-                                    //       ${p.status === "failed" && "bg-red-100 text-red-800"}
-                                    //     `}
-                                    //               >
-                                    //                 {p.status}
-                                    //               </span>
-                                    //             </td>
-
-                                    //             {/* Created At */}
-                                    //             <td className="px-4 py-3 text-gray-600">
-                                    //               {new Date(p.created_at).toLocaleString()}
-                                    //             </td>
-                                    //           </tr>
-                                    //         ))}
-                                    //       </tbody>
-                                    //     </table>
-                                    //   </CardContent>
-                                    // </Card>
-
                                     <Card>
                                         <CardContent className="p-0 overflow-x-auto">
                                             <table className="w-full text-sm">
@@ -1139,45 +928,24 @@ const scheduleWordPressPost = async () => {
                                                         <th className="px-4 py-3 text-left">Posted At</th>
                                                     </tr>
                                                 </thead>
-
                                                 <tbody>
                                                     {paginatedPublishedPosts.map(p => (
                                                         <tr key={p.id} className="border-b hover:bg-gray-50">
-                                                            <td className="px-4 py-3 font-medium">
-                                                                {p.platform.toUpperCase()}
-                                                            </td>
-                                                            <td className="px-4 py-3 truncate max-w-md">
-                                                                {p.caption}
-                                                            </td>
+                                                            <td className="px-4 py-3 font-medium">{p.platform?.toUpperCase()}</td>
+                                                            <td className="px-4 py-3 truncate max-w-md">{p.caption}</td>
                                                             <td className="px-4 py-3">
-                                                                <span
-                                                                    className={`px-2 py-1 rounded text-xs
-                  ${p.status === "success"
-                                                                            ? "bg-green-100 text-green-700"
-                                                                            : "bg-red-100 text-red-700"}
-                `}
-                                                                >
+                                                                <span className={`px-2 py-1 rounded text-xs ${p.status === "success" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                                                                     {p.status}
                                                                 </span>
                                                             </td>
-                                                            <td className="px-4 py-3">
-                                                                {new Date(p.created_at).toLocaleString()}
-                                                            </td>
+                                                            <td className="px-4 py-3">{new Date(p.created_at).toLocaleString()}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
                                             </table>
-
-                                            <TablePagination
-                                                page={pubPage}
-                                                totalPages={pubTotalPages}
-                                                pageSize={pubPageSize}
-                                                setPage={setPubPage}
-                                                setPageSize={setPubPageSize}
-                                            />
+                                            <TablePagination page={pubPage} totalPages={pubTotalPages} pageSize={pubPageSize} setPage={setPubPage} setPageSize={setPubPageSize} />
                                         </CardContent>
                                     </Card>
-
                                 )}
                             </div>
 
