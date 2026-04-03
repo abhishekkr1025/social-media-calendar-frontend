@@ -3,8 +3,8 @@ import { Facebook, Instagram, Twitter, Linkedin, Youtube, Send, X, Image, Tag, L
 import { SiWordpress } from 'react-icons/si'
 import { showError, showSuccess, showWarning } from '@/components/Toast'
 
-// const BASE_URL = "https://prod.panditjee.com"
-const BASE_URL = "http://localhost:5000"
+const BASE_URL = "https://prod.panditjee.com"
+// const BASE_URL = "http://localhost:5000"
 
 const platformConfig = {
     facebook:  { icon: Facebook,  color: '#1877F2', bg: '#E7F0FD', label: 'Facebook' },
