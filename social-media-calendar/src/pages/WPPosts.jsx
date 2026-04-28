@@ -10,8 +10,11 @@ import TranslateIcon from "@mui/icons-material/Translate";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Cancel";
+import { authFetch } from '../lib/auth';
 
-const API_URL = "https://prod.panditjee.com/api/wp-posts";
+
+// const API_URL = "https://prod.panditjee.com/api/wp-posts";
+const API_URL = "http://localhost:5000/api/wp-posts";
 
 export default function WPPostsTest() {
     const [posts, setPosts] = useState([]);
@@ -40,7 +43,7 @@ export default function WPPostsTest() {
     const [deletingId, setDeletingId] = useState(null);
 
     useEffect(() => {
-        fetch(API_URL)
+        authFetch(API_URL)
             .then(res => {
                 if (!res.ok) throw new Error("Failed to fetch");
                 return res.json();
@@ -61,7 +64,7 @@ export default function WPPostsTest() {
         setModalOpen(true);
         setTranslationsLoading(true);
         try {
-            const res = await fetch(`https://prod.panditjee.com/api/wp-posts/${post.id}/translations`);
+            const res = await authFetch(`https://prod.panditjee.com/api/wp-posts/${post.id}/translations`);
             const data = await res.json();
             setTranslations(data);
         } catch {
@@ -82,7 +85,7 @@ export default function WPPostsTest() {
     setApplyAllResult(null);
 
     try {
-        const res = await fetch(
+        const res = await authFetch(
             `https://prod.panditjee.com/api/wp-posts/translations/apply-all/${selectedPost.id}`,
             {
                 method: "PUT",
@@ -141,7 +144,7 @@ export default function WPPostsTest() {
         setSaveSuccess(false);
 
         try {
-            const res = await fetch(
+            const res = await authFetch(
                 `https://prod.panditjee.com/api/wp-posts/translations/${previewTranslation.id}`,
                 {
                     method: "PUT",
@@ -193,7 +196,7 @@ export default function WPPostsTest() {
 
     setDeletingId(translationId);
     try {
-        const res = await fetch(
+        const res = await authFetch(
             `https://prod.panditjee.com/api/wp-posts/translations/${translationId}`,
             { method: "DELETE" }
         );

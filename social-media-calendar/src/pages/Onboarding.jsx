@@ -2,15 +2,16 @@ import ConnectButton from '../components/ConnectButton';
 import ConnectedAccountRow from '../components/ConnectedAccountRow';
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { authFetch } from '../lib/auth';
 
 // Single-file React onboarding UI
 // - Uses Tailwind utility classes for styling
 // - Default export is the OnboardingApp component
 // - Assumes BACKEND_URL is set in env (REACT_APP_BACKEND_URL)
 
-const BACKEND_URL =  "https://prod.panditjee.com";
+// const BACKEND_URL =  "https://prod.panditjee.com";
 
-// const BACKEND_URL =  "http://localhost:5000";
+const BACKEND_URL =  "http://localhost:5000";
 function useQuery() {
   return new URLSearchParams(useLocation().search);
 }
@@ -27,7 +28,7 @@ export default function OnboardingApp() {
     // load connected accounts for this client
     (async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/clients/${clientId}/instagram/accounts`);
+        const res = await authFetch(`${BACKEND_URL}/api/clients/${clientId}/instagram/accounts`);
         if (res.ok) {
           const data = await res.json();
           setConnected(data);
@@ -44,7 +45,7 @@ export default function OnboardingApp() {
     setMessage('');
     try {
       // Your backend should have POST /api/clients that creates a client and returns its id
-      const res = await fetch(`${BACKEND_URL}/api/clients`, {
+      const res = await authFetch(`${BACKEND_URL}/api/clients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(client),
@@ -67,7 +68,7 @@ export default function OnboardingApp() {
   const DisconnectRow = ({ acc }) => {
     const disconnect = async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/instagram/accounts/${acc.id}`, { method: 'DELETE' });
+        const res = await authFetch(`${BACKEND_URL}/api/instagram/accounts/${acc.id}`, { method: 'DELETE' });
         if (res.ok) {
           setConnected((c) => c.filter(x => x.id !== acc.id));
         }

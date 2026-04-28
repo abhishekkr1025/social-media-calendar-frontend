@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-
-const BASE_URL = "https://prod.panditjee.com";
-// const BASE_URL = "https://localhost:5000";
+import { authFetch } from '../lib/auth';
+// const BASE_URL = "https://prod.panditjee.com";
+const BASE_URL = "http://localhost:5000";
 
 export default function CategoryManagement() {
   const { id } = useParams(); // site id
@@ -23,10 +23,10 @@ export default function CategoryManagement() {
 
     const [siteRes, masterRes, siteCatRes, mappingRes] =
       await Promise.all([
-        fetch(`${BASE_URL}/api/wordpress-sites/${id}`),
-        fetch(`${BASE_URL}/api/master-categories`),
-        fetch(`${BASE_URL}/api/wordpress-sites/${id}/categories`),
-        fetch(`${BASE_URL}/api/site-category-mapping/${id}`)
+        authFetch(`${BASE_URL}/api/wordpress-sites/${id}`),
+        authFetch(`${BASE_URL}/api/master-categories`),
+        authFetch(`${BASE_URL}/api/wordpress-sites/${id}/categories`),
+        authFetch(`${BASE_URL}/api/site-category-mapping/${id}`)
       ]);
 
     const site = await siteRes.json();
@@ -49,7 +49,7 @@ export default function CategoryManagement() {
   async function addMasterCategory() {
     if (!newMasterName.trim()) return;
 
-    await fetch(`${BASE_URL}/api/master-categories`, {
+    await authFetch(`${BASE_URL}/api/master-categories`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: newMasterName })
@@ -67,7 +67,7 @@ export default function CategoryManagement() {
       })
     );
 
-    await fetch(`${BASE_URL}/api/site-category-mapping/${id}`, {
+    await authFetch(`${BASE_URL}/api/site-category-mapping/${id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -77,7 +77,7 @@ export default function CategoryManagement() {
   }
 
   async function autoMatch() {
-    const res = await fetch(
+    const res = await authFetch(
       `${BASE_URL}/api/site-category-mapping/${id}/auto-match`,
       { method: "POST" }
     );

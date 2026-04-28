@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { authFetch } from '../lib/auth';
 
-const BASE_URL = 'https://prod.panditjee.com';
+// const BASE_URL = 'https://prod.panditjee.com';
+const BASE_URL = 'http://localhost:5000';
 
 const LANGUAGE_FLAGS = {
     English: '🇬🇧', Hindi: '🇮🇳', Tamil: '🇮🇳',
@@ -42,8 +44,8 @@ export default function WordPressSites() {
         try {
             setLoading(true);
             const [sitesRes, clientsRes] = await Promise.all([
-                fetch(`${BASE_URL}/api/wordpress-sites`),
-                fetch(`${BASE_URL}/api/clients`)
+                authFetch(`${BASE_URL}/api/wordpress-sites`),
+                authFetch(`${BASE_URL}/api/clients`)
             ]);
             setSites(await sitesRes.json());
             setClients(await clientsRes.json());
@@ -55,7 +57,7 @@ export default function WordPressSites() {
     }
 
     async function createSite() {
-        await fetch(`${BASE_URL}/api/add/wordpress-sites`, {
+        await authFetch(`${BASE_URL}/api/add/wordpress-sites`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(form)
@@ -67,7 +69,7 @@ export default function WordPressSites() {
 
     async function updateSite() {
         if (!editSite) return;
-        await fetch(`${BASE_URL}/api/wordpress-sites/${editSite.id}`, {
+        await authFetch(`${BASE_URL}/api/wordpress-sites/${editSite.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -87,7 +89,7 @@ export default function WordPressSites() {
     async function testConnection(id) {
         setTestingId(id);
         try {
-            const res = await fetch(`${BASE_URL}/api/wordpress-sites/${id}/test`, { method: "POST" });
+            const res = await authFetch(`${BASE_URL}/api/wordpress-sites/${id}/test`, { method: "POST" });
             const data = await res.json();
             setTestResults(prev => ({ ...prev, [id]: data.success }));
             setTimeout(() => setTestResults(prev => {
@@ -103,7 +105,7 @@ export default function WordPressSites() {
     async function syncCategories(id) {
         setSyncingId(id);
         try {
-            const res = await fetch(`${BASE_URL}/api/wordpress-sites/${id}/sync-categories`, { method: "POST" });
+            const res = await authFetch(`${BASE_URL}/api/wordpress-sites/${id}/sync-categories`, { method: "POST" });
             const data = await res.json();
             alert(data.success ? "✅ Categories synced!" : "❌ Sync failed");
         } catch {

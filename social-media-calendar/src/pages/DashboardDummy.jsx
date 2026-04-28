@@ -24,6 +24,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import { IconButton, Toolbar } from "@mui/material";
 import Sidebar from "@/components/Sidebar";
 import { Telegram } from '@mui/icons-material'
+import { authFetch } from '../lib/auth';
 
 // ── NEW: Panditjee icon ─────────────────────────────────────
 const PanditjeeIcon = () => (
@@ -107,8 +108,8 @@ function DashboardDummy() {
         { label: "Gujarati", value: "Gujarati" }
     ];
 
-    const BASE_URL = "https://prod.panditjee.com";
-    // const BASE_URL = "http://localhost:5000"
+    // const BASE_URL = "https://prod.panditjee.com";
+    const BASE_URL = "http://localhost:5000"
 
     // ── NEW: fetch Panditjee categories when client changes ──
     // useEffect(() => {
@@ -123,7 +124,7 @@ function DashboardDummy() {
 
     const fetchClients = async () => {
         try {
-            const res = await fetch(`${BASE_URL}/api/clients`);
+            const res = await authFetch(`${BASE_URL}/api/clients`);
             const data = await res.json();
             setClients(data);
         } catch (err) {
@@ -132,7 +133,7 @@ function DashboardDummy() {
     };
 
     async function loadWpPostsForCalendar() {
-        const res = await fetch(`${BASE_URL}/api/wp-posts`);
+        const res = await authFetch(`${BASE_URL}/api/wp-posts`);
         const data = await res.json();
         const formatted = data.map(p => {
             const dt = new Date(p.scheduled_at);
@@ -172,7 +173,7 @@ function DashboardDummy() {
     }, [clients, rawPosts]);
 
     useEffect(() => {
-        fetch(`${BASE_URL}/api/master-categories`)
+        authFetch(`${BASE_URL}/api/master-categories`)
             .then(res => res.json())
             .then(setMasterCategories);
     }, []);
@@ -209,7 +210,7 @@ function DashboardDummy() {
         formData.append("file", panditjeePost.image);
     }
 
-    const res = await fetch(`${BASE_URL}/api/panditjee/post`, {
+    const res = await authFetch(`${BASE_URL}/api/panditjee/post`, {
         method: "POST",
         body: formData
     });
@@ -251,7 +252,7 @@ function DashboardDummy() {
         formData.append("tags", wpPost.tags || "");
         if (wpPost.featured_image) formData.append("featured_image", wpPost.featured_image);
 
-        const res = await fetch(`${BASE_URL}/api/wp-posts`, { method: "POST", body: formData });
+        const res = await authFetch(`${BASE_URL}/api/wp-posts`, { method: "POST", body: formData });
         if (!res.ok) { showError("Failed to schedule blog post"); return; }
 
         showSuccess("Blog Added Successfully!");
@@ -272,7 +273,7 @@ function DashboardDummy() {
     };
 
     async function loadAllPosts() {
-        const res = await fetch(`${BASE_URL}/api/posts/all`);
+        const res = await authFetch(`${BASE_URL}/api/posts/all`);
         const data = await res.json();
         if (data.success) {
             setRawPosts(data.posts);
@@ -284,7 +285,7 @@ function DashboardDummy() {
         const url = selectedClient?.id
             ? `${BASE_URL}/api/queued/${selectedClient.id}`
             : `${BASE_URL}/api/queued-posts`;
-        const res = await fetch(url);
+        const res = await authFetch(url);
         setQueuedPosts(await res.json());
     }
 
@@ -292,7 +293,7 @@ function DashboardDummy() {
         const url = selectedClient?.id
             ? `${BASE_URL}/api/published-posts/${selectedClient.id}`
             : `${BASE_URL}/api/published-posts`;
-        const res = await fetch(url);
+        const res = await authFetch(url);
         setPublishedPosts(await res.json());
     }
 
@@ -328,7 +329,7 @@ function DashboardDummy() {
     const addClient = async () => {
         if (!newClient.trim()) { showWarning("Please enter a client name"); return; }
         try {
-            const response = await fetch(`${BASE_URL}/api/clients`, {
+            const response = await authFetch(`${BASE_URL}/api/clients`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: newClient, email: "" })
@@ -355,13 +356,13 @@ function DashboardDummy() {
                 formData.append("platforms", JSON.stringify(newPost.platforms));
                 formData.append("file", newPost.file);
 
-                const response = await fetch(`${BASE_URL}/api/posts`, { method: "POST", body: formData });
+                const response = await authFetch(`${BASE_URL}/api/posts`, { method: "POST", body: formData });
                 if (!response.ok) throw new Error("Failed to save post");
 
                 closeScheduler();
                 showSuccess(`Post Added on ${newPost.platforms}`);
 
-                const postsRes = await fetch(`${BASE_URL}/api/posts/all`);
+                const postsRes = await authFetch(`${BASE_URL}/api/posts/all`);
                 const updatedPosts = await postsRes.json();
                 if (Array.isArray(updatedPosts)) setPosts(updatedPosts);
 
@@ -377,7 +378,7 @@ function DashboardDummy() {
 
     const deletePost = async (postId) => {
         try {
-            const response = await fetch(`${BASE_URL}/api/deletePosts/${postId}`, { method: "DELETE" });
+            const response = await authFetch(`${BASE_URL}/api/deletePosts/${postId}`, { method: "DELETE" });
             if (!response.ok) throw new Error("Failed to delete post");
             setPosts(posts.filter(post => post.id !== postId));
             showSuccess("Post deleted successfully!");
@@ -405,7 +406,7 @@ function DashboardDummy() {
         if (!post || post.date === newDate) return;
         setPosts(prev => prev.map(p => p.id === postId ? { ...p, date: newDate } : p));
         try {
-            await fetch(`${BASE_URL}/api/posts/${postId}/reschedule`, {
+            await authFetch(`${BASE_URL}/api/posts/${postId}/reschedule`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ date: newDate })
@@ -416,7 +417,7 @@ function DashboardDummy() {
     const deleteClient = async (clientId) => {
         if (!window.confirm("Are you sure you want to delete this client?")) return;
         try {
-            const response = await fetch(`${BASE_URL}/api/deleteClient/${clientId}`, {
+            const response = await authFetch(`${BASE_URL}/api/deleteClient/${clientId}`, {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" }
             });

@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "../components/ui/select";
+import { authFetch } from '../lib/auth';
 
 import {
     Linkedin, Instagram, Twitter, Facebook, Youtube,
@@ -10,15 +11,15 @@ import {
 } from "lucide-react";
 import { SiWordpress } from "react-icons/si";
 
-const BASE_URL = "https://prod.panditjee.com";
+// const BASE_URL = "https://prod.panditjee.com";
 // const PANDITJEE_BASE  = "https://prod.panditjee.com"
-// const BASE_URL = "http://localhost:5000";
+const BASE_URL = "http://localhost:5000";
 const TELEGRAM_BOT_USERNAME = "cliqsocialbot"; // without @
 
 
 
 const platforms = [
-    { id: "linkedin", label: "LinkedIn", icon: <Linkedin className="w-5 h-5" />, color: "bg-blue-600" },
+    { id: "linkedin", label: "LinkedIn", icon: <Linkedin className="w-5 h-5" />, color: "bg-blue-600"  },
     { id: "instagram", label: "Instagram", icon: <Instagram className="w-5 h-5" />, color: "bg-pink-500" },
     { id: "twitter", label: "Twitter", icon: <Twitter className="w-5 h-5" />, color: "bg-sky-400" },
     { id: "facebook", label: "Facebook", icon: <Facebook className="w-5 h-5" />, color: "bg-blue-700" },
@@ -96,7 +97,7 @@ export default function ConnectToPlatforms() {
     }, []);
 
     const fetchClients = async () => {
-        const res = await fetch(`${BASE_URL}/api/clients`);
+        const res = await authFetch(`${BASE_URL}/api/clients`);
         // console.log(await res.json());
         setClients(await res.json());
     };
@@ -107,7 +108,7 @@ export default function ConnectToPlatforms() {
 
         for (let p of platforms) {
             try {
-                const res = await fetch(`${BASE_URL}/api/clients/${clientId}/${p.id}/account`);
+                const res = await authFetch(`${BASE_URL}/api/clients/${clientId}/${p.id}/account`);
                 const data = await res.json();
                 console.log(`clientId: ${clientId}`)
                 console.log(`${BASE_URL}/api/clients/${clientId}/${p.id}/account`)
@@ -168,7 +169,7 @@ export default function ConnectToPlatforms() {
     };
 
     const disconnectPlatform = async (platform) => {
-        const res = await fetch(
+        const res = await authFetch(
             `${BASE_URL}/api/clients/${selectedClientId}/${platform}/disconnect`,
             { method: "DELETE" }
         );
@@ -182,7 +183,7 @@ export default function ConnectToPlatforms() {
         if (!wpData.site_url || !wpData.username || !wpData.app_password)
             return alert("All fields are required.");
 
-        const res = await fetch(`${BASE_URL}/auth/wordpress/login`, {
+        const res = await authFetch(`${BASE_URL}/auth/wordpress/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ clientId: selectedClientId, ...wpData }),
@@ -372,7 +373,7 @@ export default function ConnectToPlatforms() {
                                     className="bg-[#21759B] text-white"
                                     onClick={async () => {
                                         for (const site of wpSites) {
-                                            await fetch(`${BASE_URL}/auth/wordpress/login`, {
+                                            await authFetch(`${BASE_URL}/auth/wordpress/login`, {
                                                 method: "POST",
                                                 headers: { "Content-Type": "application/json" },
                                                 body: JSON.stringify({
@@ -421,7 +422,7 @@ export default function ConnectToPlatforms() {
                             <Button
                                 className="bg-blue-500 text-white"
                                 onClick={async () => {
-                                    const res = await fetch(
+                                    const res = await authFetch(
                                         `${BASE_URL}/auth/telegram/connect/${selectedClientId}`
                                     );
                                     const text = await res.text();
@@ -466,7 +467,7 @@ export default function ConnectToPlatforms() {
           <Button
             className="w-full"
             onClick={async () => {
-              const res = await fetch(`${BASE_URL}/api/panditjee/connect`, {
+              const res = await authFetch(`${BASE_URL}/api/panditjee/connect`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -502,7 +503,7 @@ export default function ConnectToPlatforms() {
           <Button
             className="w-full"
             onClick={async () => {
-              const res = await fetch(`${BASE_URL}/api/panditjee/verify`, {
+              const res = await authFetch(`${BASE_URL}/api/panditjee/verify`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

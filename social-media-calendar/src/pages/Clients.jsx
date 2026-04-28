@@ -16,10 +16,12 @@ import { Button, Stack } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import LinkIcon from "@mui/icons-material/Link";
+import { authFetch } from '../lib/auth';
 
 
-const BASE_URL =   "https://prod.panditjee.com";
-// const BASE_URL =   "http://localhost:5000";
+
+// const BASE_URL =   "https://prod.panditjee.com";
+const BASE_URL =   "http://localhost:5000";
 export default function Clients() {
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -36,7 +38,7 @@ export default function Clients() {
 
     const fetchClients = async () => {
         try {
-            const res = await fetch(`${BASE_URL}/api/clients`);
+            const res = await authFetch(`${BASE_URL}/api/clients`);
             const data = await res.json();
             setClients(data);
         } catch (err) {
