@@ -5,7 +5,9 @@ import {
   LineChart, Line, PieChart, Pie, Cell, CartesianGrid
 } from 'recharts';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// const BASE_URL = 'http://localhost:5000';
+
+const BASE_URL =   "https://prod.panditjee.com";
 
 const PLATFORM_COLORS = {
   instagram: '#E1306C', facebook: '#1877F2', twitter: '#1DA1F2',

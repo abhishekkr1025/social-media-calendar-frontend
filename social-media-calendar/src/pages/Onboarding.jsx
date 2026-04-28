@@ -9,9 +9,9 @@ import { authFetch } from '../lib/auth';
 // - Default export is the OnboardingApp component
 // - Assumes BACKEND_URL is set in env (REACT_APP_BACKEND_URL)
 
-// const BACKEND_URL =  "https://prod.panditjee.com";
+const BACKEND_URL =  "https://prod.panditjee.com";
 
-const BACKEND_URL =  "http://localhost:5000";
+// const BACKEND_URL =  "http://localhost:5000";
 function useQuery() {
   return new URLSearchParams(useLocation().search);
 }

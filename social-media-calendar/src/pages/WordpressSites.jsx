@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authFetch } from '../lib/auth';
 
-// const BASE_URL = 'https://prod.panditjee.com';
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = 'https://prod.panditjee.com';
+// const BASE_URL = 'http://localhost:5000';
 
 const LANGUAGE_FLAGS = {
     English: '🇬🇧', Hindi: '🇮🇳', Tamil: '🇮🇳',

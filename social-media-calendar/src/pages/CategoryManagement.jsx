@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { authFetch } from '../lib/auth';
-// const BASE_URL = "https://prod.panditjee.com";
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "https://prod.panditjee.com";
+// const BASE_URL = "http://localhost:5000";
 
 export default function CategoryManagement() {
   const { id } = useParams(); // site id

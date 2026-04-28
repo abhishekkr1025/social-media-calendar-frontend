@@ -13,8 +13,8 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import { authFetch } from '../lib/auth';
 
 
-// const API_URL = "https://prod.panditjee.com/api/wp-posts";
-const API_URL = "http://localhost:5000/api/wp-posts";
+const API_URL = "https://prod.panditjee.com/api/wp-posts";
+// const API_URL = "http://localhost:5000/api/wp-posts";
 
 export default function WPPostsTest() {
     const [posts, setPosts] = useState([]);

@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { authFetch } from '../lib/auth';
 import { useNavigate } from 'react-router-dom';
 
-const BASE_URL = 'http://localhost:5000';
-// const BASE_URL =  'https://prod.panditjee.com';
+// const BASE_URL = 'http://localhost:5000';
+const BASE_URL =  'https://prod.panditjee.com';
 
 export default function InviteUser() {
     const [users, setUsers] = useState([]);
