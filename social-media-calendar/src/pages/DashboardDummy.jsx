@@ -303,6 +303,7 @@ function DashboardDummy() {
         twitter: <Twitter className="w-4 h-4" />,
         linkedin: <Linkedin className="w-4 h-4" />,
         youtube: <Youtube className="w-4 h-4" />,
+        "youtube-community": <Youtube className="w-4 h-4" />,   // ← NEW
         wordpress: <SiWordpress className='w-4 h-4' />,
         telegram: <Send className="w-5 h-5" />,
         panditjee: <PanditjeeIcon />,   // ← NEW
@@ -314,6 +315,7 @@ function DashboardDummy() {
         twitter: 'bg-sky-500',
         linkedin: 'bg-blue-700',
         youtube: 'bg-red-500',
+        "youtube-community": 'bg-red-700', 
         wordpress: 'bg-blue-500',
         telegram: 'bg-sky-500',
         panditjee: 'bg-orange-500',     // ← NEW
@@ -568,7 +570,7 @@ function DashboardDummy() {
                                                     </div>
                                                     <div className="flex gap-2 flex-wrap">
                                                         {Object.keys(platformIcons)
-                                                            .filter(p => p !== "wordpress" && p !== "panditjee")
+                                                            .filter(p => p !== "wordpress" && p !== "panditjee" && p !== "youtube")
                                                             .map((platform) => (
                                                                 <Button
                                                                     key={platform}
@@ -576,7 +578,8 @@ function DashboardDummy() {
                                                                     variant={newPost.platforms.includes(platform) ? "default" : "outline"}
                                                                     onClick={() => togglePlatform(platform)}
                                                                 >
-                                                                    {platformIcons[platform]} {platform}
+                                                                    {platformIcons[platform]}{" "}
+                                                                    {platform === "youtube-community" ? "YT Community" : platform}  
                                                                 </Button>
                                                             ))}
                                                     </div>
