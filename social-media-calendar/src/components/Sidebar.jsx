@@ -13,6 +13,8 @@ const NAV_ITEMS = [
   { icon: GlobeIcon,      label: "WordPress Sites",   path: "/wp-sites",  mui: false },
   { icon: ArticleIcon,    label: "WordPress Posts",   path: "/wp-posts",  mui: true },
   { icon: PeopleIcon,     label: "Clients",           path: "/clients",   mui: true },
+  { icon: ArticleIcon,    label: "Bulk Import",   path: "/bulk-import",  mui: true },
+  { icon: ArticleIcon,    label: "Bulk Import MD",   path: "/bulk-import-md",  mui: true },
 ];
 
 export default function Sidebar({ collapsed }) {

@@ -17,7 +17,8 @@ import InviteUser from './pages/InviteUser.jsx';
 import { isAdmin } from './lib/auth';
 import AdminRoute from './layouts/AdminRoute.jsx';
 import InsightsDashboard from "./pages/InsightsDashboard.jsx";
-
+import BulkImport from "./pages/BulkImport.jsx";
+import BulkImportMd from "./pages/BulkImportMd.jsx";
 
 export default function App() {
   return (
@@ -46,6 +47,8 @@ export default function App() {
             <Route path="/wp-posts" element={<WPPosts />} />
             <Route path="/wordpress-sites/:id/categories" element={<CategoryManagement />} />
             <Route path="/" element={<InsightsDashboard />} />
+            <Route path="/bulk-import" element={<BulkImport />} />
+            <Route path="/bulk-import-md" element={<BulkImportMd />} />
 
             <Route
               path="/invite"
