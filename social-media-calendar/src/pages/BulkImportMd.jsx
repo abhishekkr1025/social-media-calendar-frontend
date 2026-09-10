@@ -9,7 +9,7 @@ const LANGUAGE_OPTIONS = [
     "Punjabi", "Bengali", "Kannada", "Malayalam", "Urdu"
 ];
 
-//trying again CI CD Pipeline testing
+//CI CD Pipeline testing again
 // Default client to preselect once the client list loads — change here if it changes.
 const DEFAULT_CLIENT_EMAIL = "cliqindiaoffice@gmail.com";
 const DEFAULT_LANGUAGE = "English";
