@@ -1,0 +1,53 @@
+name: Deploy Frontend to Azure VM
+
+on:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+env:
+    BUILD_DIR: dist
+    STAGING_PATH: /tmp/react-app-deploy
+    DEPLOY_PATH: /var/www/react-app
+
+jobs:
+    build-and-deploy:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+                  cache: "npm"
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Build
+              run: npm run build
+              env:
+                  VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+
+            - name: Rsync build output to staging path on Azure VM
+              uses: burnett01/rsync-deployments@7.0.1
+              with:
+                  switches: -avzr --delete
+                  path: ${{ env.BUILD_DIR }}/
+                  remote_path: ${{ env.STAGING_PATH }}
+                  remote_host: ${{ secrets.AZURE_VM_HOST }}
+                  remote_user: ${{ secrets.AZURE_VM_USER }}
+                  remote_key: ${{ secrets.AZURE_VM_SSH_KEY }}
+
+            - name: Promote staged build to live path and reload nginx
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.AZURE_VM_HOST }}
+                  username: ${{ secrets.AZURE_VM_USER }}
+                  key: ${{ secrets.AZURE_VM_SSH_KEY }}
+                  script: |
+                      sudo /usr/local/bin/deploy-hallabol.sh
