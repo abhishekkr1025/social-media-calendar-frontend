@@ -7,6 +7,7 @@ on:
     workflow_dispatch:
 
 env:
+    APP_DIR: social-media-calendar
     BUILD_DIR: dist
     STAGING_PATH: /tmp/react-app-deploy
     DEPLOY_PATH: /var/www/react-app
@@ -19,16 +20,28 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v4
 
+            - name: Debug — list repo contents
+              run: |
+                  echo "Workspace root:"
+                  pwd
+                  echo "---"
+                  ls -la
+                  echo "---"
+                  ls -la ${{ env.APP_DIR }} || echo "APP_DIR folder not found"
+
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: "24"
                   cache: "npm"
+                  cache-dependency-path: ${{ env.APP_DIR }}/package-lock.json
 
             - name: Install dependencies
+              working-directory: ${{ env.APP_DIR }}
               run: npm ci
 
             - name: Build
+              working-directory: ${{ env.APP_DIR }}
               run: npm run build
               env:
                   VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
@@ -37,7 +50,7 @@ jobs:
               uses: burnett01/rsync-deployments@7.0.1
               with:
                   switches: -avzr --delete
-                  path: ${{ env.BUILD_DIR }}/
+                  path: ${{ env.APP_DIR }}/${{ env.BUILD_DIR }}/
                   remote_path: ${{ env.STAGING_PATH }}
                   remote_host: ${{ secrets.AZURE_VM_HOST }}
                   remote_user: ${{ secrets.AZURE_VM_USER }}
