@@ -3,6 +3,7 @@ import { setToken } from '../lib/auth';
 import { useNavigate } from 'react-router-dom';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";  
+// console.log(BASE_URL);
 // const BASE_URL = 'http://localhost:5000';
 
 export default function Login() {
