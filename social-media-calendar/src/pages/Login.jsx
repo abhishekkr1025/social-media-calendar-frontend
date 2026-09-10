@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { setToken } from '../lib/auth';
 import { useNavigate } from 'react-router-dom';
 
-const BASE_URL = 'https://prod.panditjee.com';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";  
 // const BASE_URL = 'http://localhost:5000';
 
 export default function Login() {

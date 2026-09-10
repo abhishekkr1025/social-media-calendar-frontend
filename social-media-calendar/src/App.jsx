@@ -19,6 +19,7 @@ import AdminRoute from './layouts/AdminRoute.jsx';
 import InsightsDashboard from "./pages/InsightsDashboard.jsx";
 import BulkImport from "./pages/BulkImport.jsx";
 import BulkImportMd from "./pages/BulkImportMd.jsx";
+import NewsSkillLauncher from "./pages/claudeskillrunner.jsx";
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
             <Route path="/" element={<InsightsDashboard />} />
             <Route path="/bulk-import" element={<BulkImport />} />
             <Route path="/bulk-import-md" element={<BulkImportMd />} />
+            <Route path="/claude-skills" element={<NewsSkillLauncher />}/>
 
             <Route
               path="/invite"

@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { icon: PeopleIcon,     label: "Clients",           path: "/clients",   mui: true },
   { icon: ArticleIcon,    label: "Bulk Import",   path: "/bulk-import",  mui: true },
   { icon: ArticleIcon,    label: "Bulk Import MD",   path: "/bulk-import-md",  mui: true },
+  { icon: ArticleIcon,    label: "Skill Runner",   path: "/claude-skills",  mui: true },
 ];
 
 export default function Sidebar({ collapsed }) {
@@ -26,8 +27,13 @@ export default function Sidebar({ collapsed }) {
     navigate('/login');
   };
 
-  const isActive = (path) =>
-    path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
+  const isActive = (path) => {
+    if (path === "/") return location.pathname === "/";
+    return (
+        location.pathname === path ||
+        location.pathname.startsWith(path + "/")
+    );
+};
 
   return (
     <>
