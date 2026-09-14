@@ -9,7 +9,6 @@ import { useState, useEffect } from "react";
         "Punjabi", "Bengali", "Kannada", "Malayalam", "Urdu"
     ];
 
-    //CI CD Pipeline testing again
     // Default client to preselect once the client list loads — change here if it changes.
     const DEFAULT_CLIENT_EMAIL = "cliqindiaoffice@gmail.com";
     const DEFAULT_LANGUAGE = "English";
@@ -298,276 +297,497 @@ import { useState, useEffect } from "react";
         }
 
         return (
-            <div style={{ maxWidth: 1080, margin: "0 auto", padding: "24px" }}>
-                <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 8 }}>
-                    Import Articles from Markdown
-                </h1>
-                <p style={{ color: "#666", marginBottom: 24 }}>
-                    Upload one or more ready-to-publish articles (.md with frontmatter). They're queued
-                    into your WordPress multisite pipeline for translation and publishing. Client and
-                    language apply to every file below; category, schedule, and featured image can be
-                    set per file.
-                </p>
+            <div className="bimd-page">
+                <style>{`
+                    @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 
-                <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
-                    <div style={{ flex: 1 }}>
-                        <label style={{ display: "block", fontWeight: 500, marginBottom: 6 }}>
-                            Client
-                        </label>
-                        <select
-                            value={clientId}
-                            onChange={(e) => setClientId(e.target.value)}
-                            disabled={loadingOptions}
-                            style={selectStyle}
-                        >
-                            <option value="">
-                                {loadingOptions ? "Loading..." : "Select a client"}
-                            </option>
-                            {clients.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                    {c.name} ({c.email})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    .bimd-page {
+                        --paper: #F6F5F0;
+                        --panel: #FFFFFF;
+                        --ink: #1C1B17;
+                        --ink-soft: #4A473F;
+                        --graphite: #78756A;
+                        --rule: #E2DFD3;
+                        --rule-strong: #CBC7B8;
+                        --press: #24486B;
+                        --press-ink: #16314B;
+                        --press-tint: #EAF0F5;
+                        --wire-green: #2F6B4A;
+                        --wire-green-bg: #EEF4EE;
+                        --wire-red: #A23B2E;
+                        --wire-red-bg: #FBEFEC;
+                        --amber: #93641C;
 
-                    <div style={{ flex: 1 }}>
-                        <label style={{ display: "block", fontWeight: 500, marginBottom: 6 }}>
-                            Original Language
-                        </label>
-                        <select
-                            value={language}
-                            onChange={(e) => setLanguage(e.target.value)}
-                            style={selectStyle}
-                        >
-                            {LANGUAGE_OPTIONS.map((l) => (
-                                <option key={l} value={l}>{l}</option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
+                        background: var(--paper);
+                        color: var(--ink);
+                        font-family: 'IBM Plex Sans', system-ui, sans-serif;
+                        min-height: 100%;
+                        padding: 40px 24px 80px;
+                    }
 
-                <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: "block", fontWeight: 500, marginBottom: 6 }}>
-                        Markdown files
-                    </label>
-                    <input type="file" accept=".md" multiple onChange={handleFileChange} />
-                </div>
+                    .bimd-shell { max-width: 1080px; margin: 0 auto; }
 
-                {rows.length > 0 && (
-                    <div style={{ marginBottom: 16, overflowX: "auto" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                            <thead>
-                                <tr>
-                                    <th style={thStyle}>File</th>
-                                    <th style={thStyle}>Category</th>
-                                    <th style={thStyle}>Scheduled At</th>
-                                    <th style={thStyle}>Image</th>
-                                    <th style={{ ...thStyle, width: 80 }}></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {rows.map((r) => (
-                                    <tr key={r.id}>
-                                        <td style={tdStyle}>
-                                            <span style={{ fontSize: 13, color: "#444" }}>{r.file.name}</span>
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <select
-                                                value={r.masterCategoryId}
-                                                onChange={(e) => updateRowCategory(r.id, e.target.value)}
-                                                disabled={loadingOptions}
-                                                style={rowInputStyle}
-                                            >
-                                                <option value="">No category</option>
-                                                {categories.map((c) => (
-                                                    <option key={c.id} value={c.id}>
-                                                        {c.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            {r.detectedCategory && (
-                                                <span style={{ display: "block", fontSize: 11, color: "#999", marginTop: 2 }}>
-                                                    Detected: {r.detectedCategory}
-                                                    {resolveCategoryName(r.detectedCategory) !== r.detectedCategory
-                                                        ? ` → ${resolveCategoryName(r.detectedCategory)}`
-                                                        : ""}
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <input
-                                                type="datetime-local"
-                                                value={r.scheduledAt}
-                                                onChange={(e) => updateRowSchedule(r.id, e.target.value)}
-                                                style={rowInputStyle}
-                                            />
-                                            <span style={{ display: "block", fontSize: 11, color: "#999", marginTop: 2 }}>
-                                                Blank uses the file's date_published, or now
-                                            </span>
-                                        </td>
-                                        <td style={tdStyle}>
-                                            {r.imagePreviewUrl ? (
-                                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                                    <img
-                                                        src={r.imagePreviewUrl}
-                                                        alt=""
-                                                        style={{
-                                                            width: 48,
-                                                            height: 48,
-                                                            objectFit: "cover",
-                                                            borderRadius: 6,
-                                                            border: "1px solid #eee"
-                                                        }}
-                                                    />
-                                                    <button
-                                                        onClick={() => removeRowImage(r.id)}
-                                                        style={{
-                                                            border: "none",
-                                                            background: "none",
-                                                            color: "#999",
-                                                            cursor: "pointer",
-                                                            fontSize: 12
-                                                        }}
+                    .bimd-masthead {
+                        border-bottom: 1px solid var(--rule-strong);
+                        padding-bottom: 22px;
+                        margin-bottom: 32px;
+                        animation: bimd-rise 420ms ease-out;
+                    }
+                    .bimd-kicker {
+                        font-size: 13px;
+                        color: var(--graphite);
+                        margin: 0 0 6px;
+                        letter-spacing: 0.01em;
+                    }
+                    .bimd-title {
+                        font-family: 'Newsreader', Georgia, serif;
+                        font-weight: 500;
+                        font-size: 34px;
+                        line-height: 1.15;
+                        margin: 0 0 10px;
+                        color: var(--ink);
+                    }
+                    .bimd-sub {
+                        font-size: 14.5px;
+                        line-height: 1.55;
+                        color: var(--ink-soft);
+                        max-width: 62ch;
+                        margin: 0;
+                    }
+
+                    .bimd-section { margin-bottom: 28px; }
+                    .bimd-section-label {
+                        font-size: 12.5px;
+                        font-weight: 600;
+                        color: var(--graphite);
+                        margin: 0 0 10px;
+                    }
+
+                    .bimd-settings-grid {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 20px;
+                    }
+                    @media (max-width: 640px) {
+                        .bimd-settings-grid { grid-template-columns: 1fr; }
+                    }
+
+                    .bimd-field label {
+                        display: block;
+                        font-size: 13px;
+                        font-weight: 500;
+                        color: var(--ink-soft);
+                        margin-bottom: 6px;
+                    }
+
+                    .bimd-select, .bimd-input {
+                        width: 100%;
+                        padding: 9px 11px;
+                        border: 1px solid var(--rule-strong);
+                        border-radius: 4px;
+                        background: var(--panel);
+                        color: var(--ink);
+                        font-size: 13.5px;
+                        font-family: inherit;
+                        transition: border-color 140ms ease;
+                    }
+                    .bimd-select:focus-visible, .bimd-input:focus-visible {
+                        outline: none;
+                        border-color: var(--press);
+                        box-shadow: 0 0 0 3px var(--press-tint);
+                    }
+                    .bimd-select:disabled { color: var(--graphite); background: var(--paper); }
+
+                    .bimd-dropzone {
+                        border: 1px dashed var(--rule-strong);
+                        border-radius: 6px;
+                        background: var(--panel);
+                        padding: 22px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 16px;
+                        flex-wrap: wrap;
+                    }
+                    .bimd-dropzone-text { font-size: 13.5px; color: var(--ink-soft); }
+                    .bimd-dropzone-text strong { color: var(--ink); font-weight: 600; }
+                    .bimd-file-label {
+                        display: inline-flex;
+                        align-items: center;
+                        padding: 9px 16px;
+                        background: var(--ink);
+                        color: var(--paper);
+                        border-radius: 4px;
+                        font-size: 13px;
+                        font-weight: 500;
+                        cursor: pointer;
+                        transition: background 140ms ease;
+                        white-space: nowrap;
+                        position: relative;
+                    }
+                    .bimd-file-label:hover { background: var(--press-ink); }
+                    .bimd-file-label input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+                    .bimd-file-label:has(input:focus-visible) {
+                        outline: 2px solid var(--press);
+                        outline-offset: 2px;
+                    }
+
+                    .bimd-queue-wrap {
+                        border: 1px solid var(--rule);
+                        border-radius: 6px;
+                        background: var(--panel);
+                        overflow-x: auto;
+                    }
+                    table.bimd-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        min-width: 780px;
+                    }
+                    .bimd-table thead th {
+                        text-align: left;
+                        font-size: 12px;
+                        font-weight: 600;
+                        color: var(--graphite);
+                        padding: 12px 14px;
+                        border-bottom: 1px solid var(--rule-strong);
+                        white-space: nowrap;
+                    }
+                    .bimd-table th.bimd-col-num { width: 36px; }
+                    .bimd-table tbody td {
+                        padding: 12px 14px;
+                        border-bottom: 1px solid var(--rule);
+                        vertical-align: top;
+                    }
+                    .bimd-table tbody tr:last-child td { border-bottom: none; }
+                    .bimd-row-num {
+                        font-variant-numeric: tabular-nums;
+                        color: var(--graphite);
+                        font-size: 13px;
+                    }
+                    .bimd-filename { font-size: 13px; color: var(--ink); word-break: break-word; }
+                    .bimd-hint {
+                        display: block;
+                        font-size: 11px;
+                        color: var(--graphite);
+                        margin-top: 4px;
+                    }
+                    .bimd-hint-arrow { color: var(--ink-soft); }
+
+                    .bimd-img-cell { display: flex; align-items: center; gap: 8px; }
+                    .bimd-thumb {
+                        width: 46px; height: 46px;
+                        object-fit: cover;
+                        border-radius: 4px;
+                        border: 1px solid var(--rule-strong);
+                        flex-shrink: 0;
+                    }
+                    .bimd-image-input {
+                        display: inline-flex;
+                        align-items: center;
+                        font-size: 12px;
+                        color: var(--graphite);
+                        max-width: 190px;
+                        padding: 5px 8px 5px 5px;
+                        border: 1px dashed var(--rule-strong);
+                        border-radius: 4px;
+                        background: var(--panel);
+                    }
+                    .bimd-image-input::file-selector-button,
+                    .bimd-image-input::-webkit-file-upload-button {
+                        margin-right: 8px;
+                        padding: 5px 11px;
+                        border: none;
+                        border-radius: 4px;
+                        background: var(--press-tint);
+                        color: var(--press);
+                        font-size: 12px;
+                        font-weight: 500;
+                        font-family: inherit;
+                        cursor: pointer;
+                        transition: background 140ms ease, color 140ms ease;
+                    }
+                    .bimd-image-input:hover::file-selector-button,
+                    .bimd-image-input:hover::-webkit-file-upload-button {
+                        background: var(--press);
+                        color: #fff;
+                    }
+                    .bimd-image-input:focus-visible {
+                        outline: none;
+                        border-color: var(--press);
+                        box-shadow: 0 0 0 3px var(--press-tint);
+                    }
+
+                    .bimd-link-btn {
+                        border: none;
+                        background: none;
+                        color: var(--graphite);
+                        cursor: pointer;
+                        font-size: 12px;
+                        font-family: inherit;
+                        padding: 0;
+                        text-decoration: underline;
+                        text-underline-offset: 2px;
+                    }
+                    .bimd-link-btn:hover { color: var(--wire-red); }
+                    .bimd-link-btn:focus-visible { outline: 2px solid var(--press); outline-offset: 2px; }
+
+                    .bimd-actions {
+                        display: flex;
+                        justify-content: flex-end;
+                        margin-bottom: 40px;
+                    }
+                    .bimd-submit {
+                        padding: 11px 22px;
+                        background: var(--press);
+                        color: #fff;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: 500;
+                        font-family: inherit;
+                        transition: background 140ms ease;
+                    }
+                    .bimd-submit:hover:not(:disabled) { background: var(--press-ink); }
+                    .bimd-submit:disabled { background: var(--rule-strong); color: var(--graphite); cursor: not-allowed; }
+                    .bimd-submit:focus-visible { outline: 2px solid var(--press); outline-offset: 2px; }
+
+                    .bimd-results { animation: bimd-rise 320ms ease-out; }
+                    .bimd-results-heading {
+                        font-family: 'Newsreader', Georgia, serif;
+                        font-size: 19px;
+                        font-weight: 500;
+                        margin: 0 0 14px;
+                        color: var(--ink);
+                    }
+                    .bimd-result-card {
+                        display: flex;
+                        gap: 12px;
+                        align-items: flex-start;
+                        padding: 13px 14px;
+                        margin-bottom: 8px;
+                        background: var(--panel);
+                        border: 1px solid var(--rule);
+                        border-left: 3px solid var(--wire-green);
+                        border-radius: 3px;
+                    }
+                    .bimd-result-card.is-error { border-left-color: var(--wire-red); }
+                    .bimd-result-thumb {
+                        width: 40px; height: 40px;
+                        object-fit: cover;
+                        border-radius: 4px;
+                        border: 1px solid var(--rule-strong);
+                        flex-shrink: 0;
+                    }
+                    .bimd-result-filename { margin: 0 0 3px; font-size: 12.5px; color: var(--graphite); }
+                    .bimd-result-line { margin: 2px 0; font-size: 13.5px; color: var(--ink); }
+                    .bimd-result-line strong { font-weight: 600; }
+                    .bimd-result-error { margin: 2px 0; font-size: 13.5px; color: var(--wire-red); }
+
+                    @keyframes bimd-rise {
+                        from { opacity: 0; transform: translateY(6px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                    @media (prefers-reduced-motion: reduce) {
+                        .bimd-masthead, .bimd-results { animation: none; }
+                    }
+                `}</style>
+
+                <div className="bimd-shell">
+                    <header className="bimd-masthead">
+                        <p className="bimd-kicker">Publishing pipeline</p>
+                        <h1 className="bimd-title">Import from Markdown</h1>
+                        <p className="bimd-sub">
+                            Upload ready-to-publish articles (.md with frontmatter). Each one is queued
+                            into the WordPress multisite pipeline for translation and publishing. Client
+                            and language apply to the whole batch; category, schedule, and featured image
+                            are set per article.
+                        </p>
+                    </header>
+
+                    <section className="bimd-section">
+                        <div className="bimd-settings-grid">
+                            <div className="bimd-field">
+                                <label htmlFor="bimd-client">Client</label>
+                                <select
+                                    id="bimd-client"
+                                    className="bimd-select"
+                                    value={clientId}
+                                    onChange={(e) => setClientId(e.target.value)}
+                                    disabled={loadingOptions}
+                                >
+                                    <option value="">
+                                        {loadingOptions ? "Loading…" : "Select a client"}
+                                    </option>
+                                    {clients.map((c) => (
+                                        <option key={c.id} value={c.id}>
+                                            {c.name} ({c.email})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="bimd-field">
+                                <label htmlFor="bimd-language">Original language</label>
+                                <select
+                                    id="bimd-language"
+                                    className="bimd-select"
+                                    value={language}
+                                    onChange={(e) => setLanguage(e.target.value)}
+                                >
+                                    {LANGUAGE_OPTIONS.map((l) => (
+                                        <option key={l} value={l}>{l}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="bimd-section">
+                        <p className="bimd-section-label">Markdown files</p>
+                        <div className="bimd-dropzone">
+                            <p className="bimd-dropzone-text">
+                                {rows.length > 0
+                                    ? <><strong>{rows.length}</strong> file{rows.length === 1 ? "" : "s"} in this batch — add more or continue below.</>
+                                    : <>No files added yet. Select one or more <strong>.md</strong> files to start a batch.</>
+                                }
+                            </p>
+                            <label className="bimd-file-label">
+                                Add files
+                                <input type="file" accept=".md" multiple onChange={handleFileChange} />
+                            </label>
+                        </div>
+                    </section>
+
+                    {rows.length > 0 && (
+                        <section className="bimd-section">
+                            <p className="bimd-section-label">Batch queue</p>
+                            <div className="bimd-queue-wrap">
+                                <table className="bimd-table">
+                                    <thead>
+                                        <tr>
+                                            <th className="bimd-col-num">#</th>
+                                            <th>File</th>
+                                            <th>Category</th>
+                                            <th>Scheduled at</th>
+                                            <th>Image</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {rows.map((r, idx) => (
+                                            <tr key={r.id}>
+                                                <td className="bimd-row-num">{idx + 1}</td>
+                                                <td>
+                                                    <span className="bimd-filename">{r.file.name}</span>
+                                                </td>
+                                                <td>
+                                                    <select
+                                                        className="bimd-select"
+                                                        value={r.masterCategoryId}
+                                                        onChange={(e) => updateRowCategory(r.id, e.target.value)}
+                                                        disabled={loadingOptions}
                                                     >
+                                                        <option value="">No category</option>
+                                                        {categories.map((c) => (
+                                                            <option key={c.id} value={c.id}>
+                                                                {c.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    {r.detectedCategory && (
+                                                        <span className="bimd-hint">
+                                                            Detected: {r.detectedCategory}
+                                                            {resolveCategoryName(r.detectedCategory) !== r.detectedCategory
+                                                                ? <span className="bimd-hint-arrow"> → {resolveCategoryName(r.detectedCategory)}</span>
+                                                                : ""}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    <input
+                                                        type="datetime-local"
+                                                        className="bimd-input"
+                                                        value={r.scheduledAt}
+                                                        onChange={(e) => updateRowSchedule(r.id, e.target.value)}
+                                                    />
+                                                    <span className="bimd-hint">Blank uses the file's date_published, or now</span>
+                                                </td>
+                                                <td>
+                                                    {r.imagePreviewUrl ? (
+                                                        <div className="bimd-img-cell">
+                                                            <img className="bimd-thumb" src={r.imagePreviewUrl} alt="" />
+                                                            <button className="bimd-link-btn" onClick={() => removeRowImage(r.id)}>
+                                                                Remove
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <input
+                                                            type="file"
+                                                            className="bimd-image-input"
+                                                            accept="image/jpeg,image/png,image/webp,image/gif"
+                                                            aria-label={`Featured image for ${r.file.name}`}
+                                                            onChange={(e) => updateRowImage(r.id, e.target.files?.[0])}
+                                                        />
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    <button className="bimd-link-btn" onClick={() => removeRow(r.id)}>
                                                         Remove
                                                     </button>
-                                                </div>
-                                            ) : (
-                                                <input
-                                                    type="file"
-                                                    accept="image/jpeg,image/png,image/webp,image/gif"
-                                                    onChange={(e) => updateRowImage(r.id, e.target.files?.[0])}
-                                                    style={{ fontSize: 12, maxWidth: 160 }}
-                                                />
-                                            )}
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <button
-                                                onClick={() => removeRow(r.id)}
-                                                style={{
-                                                    border: "none",
-                                                    background: "none",
-                                                    color: "#999",
-                                                    cursor: "pointer",
-                                                    fontSize: 12
-                                                }}
-                                            >
-                                                Remove
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-
-                <button
-                    onClick={handleUpload}
-                    disabled={uploading}
-                    style={{
-                        padding: "10px 20px",
-                        background: uploading ? "#999" : "#111",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: 6,
-                        cursor: uploading ? "not-allowed" : "pointer",
-                        fontWeight: 500
-                    }}
-                >
-                    {uploading ? "Uploading..." : `Upload & Queue${rows.length ? ` (${rows.length})` : ""}`}
-                </button>
-
-                {results && (
-                    <div style={{ marginTop: 32 }}>
-                        <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>
-                            {results.succeededCount} of {results.total} queued successfully
-                        </h2>
-
-                        {results.results.map((r, i) => (
-                            <div
-                                key={i}
-                                style={{
-                                    padding: 12,
-                                    marginBottom: 8,
-                                    border: `1px solid ${r.success ? "#d4edda" : "#f5c6cb"}`,
-                                    borderRadius: 8,
-                                    background: r.success ? "#f6fef8" : "#fff6f6",
-                                    display: "flex",
-                                    gap: 12,
-                                    alignItems: "flex-start"
-                                }}
-                            >
-                                {r.success && r.featured_image_url && (
-                                    <img
-                                        src={r.featured_image_url}
-                                        alt=""
-                                        style={{
-                                            width: 40,
-                                            height: 40,
-                                            objectFit: "cover",
-                                            borderRadius: 6,
-                                            border: "1px solid #eee",
-                                            flexShrink: 0
-                                        }}
-                                    />
-                                )}
-                                <div>
-                                    <p style={{ margin: "2px 0", fontSize: 13, color: "#888" }}>
-                                        {r.filename}
-                                    </p>
-                                    {r.success ? (
-                                        <>
-                                            <p style={{ margin: "2px 0" }}><strong>Title:</strong> {r.title}</p>
-                                            <p style={{ margin: "2px 0" }}><strong>Post ID:</strong> {r.postId}</p>
-                                            <p style={{ margin: "2px 0" }}>
-                                                <strong>Scheduled for:</strong> {new Date(r.scheduledAt).toLocaleString()}
-                                            </p>
-                                        </>
-                                    ) : (
-                                        <p style={{ margin: "2px 0", color: "#c0392b" }}>
-                                            <strong>Error:</strong> {r.error}{r.details ? ` — ${r.details}` : ""}
-                                        </p>
-                                    )}
-                                </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-                        ))}
+                        </section>
+                    )}
+
+                    <div className="bimd-actions">
+                        <button
+                            className="bimd-submit"
+                            onClick={handleUpload}
+                            disabled={uploading}
+                        >
+                            {uploading ? "Uploading…" : `Upload & queue${rows.length ? ` (${rows.length})` : ""}`}
+                        </button>
                     </div>
-                )}
-                <TodayImports />
+
+                    {results && (
+                        <section className="bimd-results">
+                            <h2 className="bimd-results-heading">
+                                {results.succeededCount} of {results.total} queued successfully
+                            </h2>
+
+                            {results.results.map((r, i) => (
+                                <div key={i} className={`bimd-result-card${r.success ? "" : " is-error"}`}>
+                                    {r.success && r.featured_image_url && (
+                                        <img className="bimd-result-thumb" src={r.featured_image_url} alt="" />
+                                    )}
+                                    <div>
+                                        <p className="bimd-result-filename">{r.filename}</p>
+                                        {r.success ? (
+                                            <>
+                                                <p className="bimd-result-line"><strong>Title:</strong> {r.title}</p>
+                                                <p className="bimd-result-line"><strong>Post ID:</strong> {r.postId}</p>
+                                                <p className="bimd-result-line">
+                                                    <strong>Scheduled for:</strong> {new Date(r.scheduledAt).toLocaleString()}
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <p className="bimd-result-error">
+                                                <strong>Error:</strong> {r.error}{r.details ? ` — ${r.details}` : ""}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </section>
+                    )}
+
+                    <TodayImports />
+                </div>
             </div>
         );
     }
-
-    const selectStyle = {
-        width: "100%",
-        padding: "8px 12px",
-        border: "1px solid #ccc",
-        borderRadius: 6,
-        background: "#fff"
-    };
-
-    const rowInputStyle = {
-        width: "100%",
-        padding: "6px 8px",
-        border: "1px solid #ccc",
-        borderRadius: 6,
-        background: "#fff",
-        fontSize: 13
-    };
-
-    const thStyle = {
-        textAlign: "left",
-        padding: "8px",
-        borderBottom: "2px solid #eee",
-        fontSize: 12,
-        color: "#666",
-        fontWeight: 600
-    };
-
-    const tdStyle = {
-        padding: "8px",
-        borderBottom: "1px solid #f0f0f0",
-        verticalAlign: "top"
-    };
