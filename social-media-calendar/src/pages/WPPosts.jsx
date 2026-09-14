@@ -278,9 +278,9 @@ export default function WPPostsTest() {
                                                 Translations
                                             </button>
                                         </Tooltip>
-                                        <button className="text-red-600 text-sm hover:underline">
+                                        {/* <button className="text-red-600 text-sm hover:underline">
                                             Delete
-                                        </button>
+                                        </button> */}
                                     </div>
                                 </TableCell>
                             </TableRow>
