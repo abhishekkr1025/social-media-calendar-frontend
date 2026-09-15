@@ -364,7 +364,7 @@ export default function WPPostsTest() {
                                                 )}
                                                 {t.external_post_id && t.site_url && (
                                                     
-                                                       <a href={`${t.site_url}${t.site_path || ""}/wp-admin/post.php?post=${t.external_post_id}&action=edit`}
+                                                       <a href={`${t.site_url}${t.site_path || ""}/admin-portal/post.php?post=${t.external_post_id}&action=edit`}
                                                         target="_blank" rel="noreferrer"
                                                         className="flex items-center gap-1 text-orange-500 text-sm hover:underline"
                                                     >
