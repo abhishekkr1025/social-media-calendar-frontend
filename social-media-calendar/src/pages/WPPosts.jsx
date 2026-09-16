@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import {
     Table, TableBody, TableCell, TableHead, TableRow,
     Chip, CircularProgress, Dialog, DialogTitle,
-    DialogContent, DialogActions, IconButton, Tooltip, Button
+    DialogContent, DialogActions, IconButton, Tooltip, Button,
+    Checkbox
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
@@ -10,6 +11,7 @@ import TranslateIcon from "@mui/icons-material/Translate";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Cancel";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { authFetch } from '../lib/auth';
 
 
@@ -41,6 +43,15 @@ export default function WPPostsTest() {
     const [applyingAll, setApplyingAll] = useState(false);
     const [applyAllResult, setApplyAllResult] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
+
+    // ── Bulk delete (per post row) state ──
+    const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+    const [bulkDeletePost, setBulkDeletePost] = useState(null);
+    const [bulkTranslations, setBulkTranslations] = useState([]);
+    const [bulkLoading, setBulkLoading] = useState(false);
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [bulkDeleting, setBulkDeleting] = useState(false);
+    const [bulkDeleteResults, setBulkDeleteResults] = useState({}); // { [id]: 'pending' | 'success' | 'error' }
 
     useEffect(() => {
         authFetch(API_URL)
@@ -191,6 +202,21 @@ export default function WPPostsTest() {
         }
     }
 
+    // Deletes the wp-posts row itself (called once every translation of that post is gone).
+    async function deletePostEntry(postId) {
+        try {
+            const res = await authFetch(`${API_URL}/delete/${postId}`, { method: "DELETE" });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                console.error("Failed to delete post entry:", data.error);
+                return;
+            }
+            setPosts(prev => prev.filter(p => p.id !== postId));
+        } catch (err) {
+            console.error("Network error deleting post entry:", err);
+        }
+    }
+
     async function deleteTranslation(translationId, language) {
     if (!window.confirm(`Delete the ${language} translation from WordPress? This cannot be undone.`)) return;
 
@@ -208,8 +234,16 @@ export default function WPPostsTest() {
             return;
         }
 
-        // Remove from local state
-        setTranslations(prev => prev.filter(t => t.id !== translationId));
+        // Remove from local state; if that was the last translation for this post,
+        // delete the wp-posts entry too and close the translations modal.
+        setTranslations(prev => {
+            const updated = prev.filter(t => t.id !== translationId);
+            if (updated.length === 0 && selectedPost) {
+                deletePostEntry(selectedPost.id);
+                setModalOpen(false);
+            }
+            return updated;
+        });
 
         // Close preview if it was open for this translation
         if (previewTranslation?.id === translationId) {
@@ -222,6 +256,89 @@ export default function WPPostsTest() {
         setDeletingId(null);
     }
 }
+
+    // ── Bulk delete modal (opened from the main posts row) ──
+    async function openBulkDelete(post) {
+        setBulkDeletePost(post);
+        setBulkTranslations([]);
+        setSelectedIds([]);
+        setBulkDeleteResults({});
+        setBulkDeleteOpen(true);
+        setBulkLoading(true);
+        try {
+            const res = await authFetch(`https://prod.panditjee.com/api/wp-posts/${post.id}/translations`);
+            const data = await res.json();
+            setBulkTranslations(data);
+        } catch {
+            setBulkTranslations([]);
+        } finally {
+            setBulkLoading(false);
+        }
+    }
+
+    function toggleSelectId(id) {
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+        );
+    }
+
+    function toggleSelectAll() {
+        if (selectedIds.length === bulkTranslations.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(bulkTranslations.map(t => t.id));
+        }
+    }
+
+    async function deleteSelectedTranslations() {
+        if (selectedIds.length === 0) return;
+        if (!window.confirm(`Delete ${selectedIds.length} selected translation(s) from WordPress? This cannot be undone.`)) return;
+
+        setBulkDeleting(true);
+
+        // Mark all selected as pending
+        setBulkDeleteResults(prev => {
+            const next = { ...prev };
+            selectedIds.forEach(id => { next[id] = "pending"; });
+            return next;
+        });
+
+        // Delete each selected translation, updating status as each completes
+        const idsToDelete = [...selectedIds];
+        const successIds = [];
+
+        await Promise.all(idsToDelete.map(async (id) => {
+            try {
+                const res = await authFetch(
+                    `https://prod.panditjee.com/api/wp-posts/translations/${id}`,
+                    { method: "DELETE" }
+                );
+                const data = await res.json().catch(() => ({}));
+
+                if (!res.ok) {
+                    setBulkDeleteResults(prev => ({ ...prev, [id]: data.error || "error" }));
+                    return;
+                }
+
+                successIds.push(id);
+                setBulkDeleteResults(prev => ({ ...prev, [id]: "success" }));
+                setBulkTranslations(prev => prev.filter(t => t.id !== id));
+                setTranslations(prev => prev.filter(t => t.id !== id));
+                setSelectedIds(prev => prev.filter(x => x !== id));
+            } catch {
+                setBulkDeleteResults(prev => ({ ...prev, [id]: "Network error" }));
+            }
+        }));
+
+        setBulkDeleting(false);
+
+        // If every translation for this post is now gone, remove the post entry too.
+        const remaining = bulkTranslations.filter(t => !successIds.includes(t.id));
+        if (remaining.length === 0 && bulkDeletePost) {
+            deletePostEntry(bulkDeletePost.id);
+            setBulkDeleteOpen(false);
+        }
+    }
 
     if (loading) {
         return (
@@ -278,9 +395,15 @@ export default function WPPostsTest() {
                                                 Translations
                                             </button>
                                         </Tooltip>
-                                        {/* <button className="text-red-600 text-sm hover:underline">
-                                            Delete
-                                        </button> */}
+                                        <Tooltip title="Delete translated articles">
+                                            <button
+                                                onClick={() => openBulkDelete(post)}
+                                                className="flex items-center gap-1 text-red-600 text-sm hover:underline"
+                                            >
+                                                <DeleteIcon fontSize="small" />
+                                                Delete
+                                            </button>
+                                        </Tooltip>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -406,6 +529,122 @@ export default function WPPostsTest() {
                         </Table>
                     )}
                 </DialogContent>
+            </Dialog>
+
+            {/* ===== Bulk Delete (checkbox) Modal — opened from post row ===== */}
+            <Dialog open={bulkDeleteOpen} onClose={() => { if (!bulkDeleting) setBulkDeleteOpen(false); }} maxWidth="md" fullWidth>
+                <DialogTitle>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <DeleteIcon className="text-red-600" />
+                                <span className="font-semibold">Delete Translated Articles</span>
+                                {bulkTranslations.length > 0 && (
+                                    <Chip
+                                        label={`${bulkTranslations.length} language${bulkTranslations.length > 1 ? "s" : ""}`}
+                                        size="small"
+                                    />
+                                )}
+                            </div>
+                            <p className="text-sm text-gray-500 mt-1 font-normal">
+                                {bulkDeletePost?.title}
+                            </p>
+                        </div>
+                        <IconButton onClick={() => setBulkDeleteOpen(false)} size="small" disabled={bulkDeleting}>
+                            <CloseIcon />
+                        </IconButton>
+                    </div>
+                </DialogTitle>
+
+                <DialogContent dividers>
+                    {bulkLoading ? (
+                        <div className="flex justify-center py-10">
+                            <CircularProgress />
+                        </div>
+                    ) : bulkTranslations.length === 0 ? (
+                        <div className="text-center py-10 text-gray-400">
+                            <TranslateIcon sx={{ fontSize: 40, mb: 1, opacity: 0.4 }} />
+                            <p>No translations found for this post.</p>
+                        </div>
+                    ) : (
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow sx={{ backgroundColor: "#f9fafb" }}>
+                                    <TableCell padding="checkbox">
+                                        <Checkbox
+                                            checked={bulkTranslations.length > 0 && selectedIds.length === bulkTranslations.length}
+                                            indeterminate={selectedIds.length > 0 && selectedIds.length < bulkTranslations.length}
+                                            onChange={toggleSelectAll}
+                                            disabled={bulkDeleting}
+                                        />
+                                    </TableCell>
+                                    <TableCell><b>Language</b></TableCell>
+                                    <TableCell><b>Title</b></TableCell>
+                                    <TableCell><b>Site URL</b></TableCell>
+                                    <TableCell><b>Status</b></TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {bulkTranslations.map(t => {
+                                    const result = bulkDeleteResults[t.id];
+                                    return (
+                                        <TableRow key={t.id} hover selected={selectedIds.includes(t.id)}>
+                                            <TableCell padding="checkbox">
+                                                <Checkbox
+                                                    checked={selectedIds.includes(t.id)}
+                                                    onChange={() => toggleSelectId(t.id)}
+                                                    disabled={bulkDeleting}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip label={t.language} size="small" variant="outlined" color="primary" />
+                                            </TableCell>
+                                            <TableCell sx={{ maxWidth: 220 }}>
+                                                <span className="block truncate text-sm">{t.title || "-"}</span>
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className="text-xs text-gray-500">
+                                                    {t.site_url}{t.site_path || ""}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell>
+                                                {result === "pending" ? (
+                                                    <span className="flex items-center gap-1 text-xs text-gray-500">
+                                                        <CircularProgress size={12} /> Deleting...
+                                                    </span>
+                                                ) : result === "success" ? (
+                                                    <span className="text-xs text-green-600">✅ Deleted</span>
+                                                ) : result ? (
+                                                    <span className="text-xs text-red-600">❌ {result}</span>
+                                                ) : (
+                                                    <StatusBadge status={t.status} />
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    )}
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <span className="text-sm text-gray-500 mr-auto">
+                        {selectedIds.length} selected
+                    </span>
+                    <Button onClick={() => setBulkDeleteOpen(false)} color="inherit" disabled={bulkDeleting}>
+                        Close
+                    </Button>
+                    <Button
+                        onClick={deleteSelectedTranslations}
+                        variant="contained"
+                        color="error"
+                        startIcon={bulkDeleting ? <CircularProgress size={16} color="inherit" /> : <DeleteIcon />}
+                        disabled={bulkDeleting || selectedIds.length === 0}
+                    >
+                        {bulkDeleting ? "Deleting..." : `Delete Selected (${selectedIds.length})`}
+                    </Button>
+                </DialogActions>
             </Dialog>
 
             {/* ===== Content Preview + Edit Modal ===== */}
