@@ -87,6 +87,10 @@ import { useState, useEffect } from "react";
         const [loadingOptions, setLoadingOptions] = useState(true);
         const [uploading, setUploading] = useState(false);
         const [results, setResults] = useState(null);
+        const [tagsModalOpen, setTagsModalOpen] = useState(false);
+        const [tagsModalRowId, setTagsModalRowId] = useState(null);
+        const [tagsDraft, setTagsDraft] = useState([]);       // chips already added, in the modal
+        const [tagsInputValue, setTagsInputValue] = useState(""); // text currently being typed
 
         useEffect(() => {
             loadOptions();
@@ -168,6 +172,8 @@ import { useState, useEffect } from "react";
                     file,
                     masterCategoryId: findCategoryId(resolveCategoryName(detectedCategory), categories),
                     scheduledAt: "",
+                    slug: "",           // ← NEW
+                    tags: "", 
                     detectedCategory,
                     image: null,
                     imagePreviewUrl: null
@@ -193,6 +199,18 @@ import { useState, useEffect } from "react";
 
         function updateRowSchedule(id, value) {
             setRows(prev => prev.map(r => (r.id === id ? { ...r, scheduledAt: value } : r)));
+        }
+
+        function updateRowSlug(id, value) {
+            const normalized = value
+                .toLowerCase()
+                .replace(/\s+/g, "-")
+                .replace(/[^a-z0-9-]/g, "");
+            setRows(prev => prev.map(r => (r.id === id ? { ...r, slug: normalized } : r)));
+        }
+
+        function updateRowTags(id, value) {
+            setRows(prev => prev.map(r => (r.id === id ? { ...r, tags: value } : r)));
         }
 
         function updateRowImage(id, file) {
@@ -258,7 +276,9 @@ import { useState, useEffect } from "react";
 
                 const fileMeta = orderedRows.map(r => ({
                     master_category_id: r.masterCategoryId || null,
-                    scheduled_at: r.scheduledAt || null
+                    scheduled_at: r.scheduledAt || null,
+                    slug: r.slug || null,     
+                    tags: r.tags || null 
                 }));
                 formData.append("fileMeta", JSON.stringify(fileMeta));
 
@@ -294,6 +314,56 @@ import { useState, useEffect } from "react";
             } finally {
                 setUploading(false);
             }
+        }
+
+        function openTagsModal(row) {
+            setTagsModalRowId(row.id);
+            setTagsDraft(row.tags ? row.tags.split(",").map(t => t.trim()).filter(Boolean) : []);
+            setTagsInputValue("");
+            setTagsModalOpen(true);
+        }
+
+        function addTagsFromInput() {
+            const parts = tagsInputValue.split(",").map(t => t.trim()).filter(Boolean);
+            if (parts.length === 0) return;
+
+            setTagsDraft(prev => {
+                const next = [...prev];
+                parts.forEach(p => {
+                    if (!next.some(t => t.toLowerCase() === p.toLowerCase())) next.push(p);
+                });
+                return next;
+            });
+            setTagsInputValue("");
+        }
+
+        function removeDraftTag(tag) {
+            setTagsDraft(prev => prev.filter(t => t !== tag));
+        }
+
+        function handleTagsInputKeyDown(e) {
+            if (e.key === "Enter" || e.key === ",") {
+                e.preventDefault();
+                addTagsFromInput();
+            }
+        }
+
+        function saveTagsModal() {
+            // catch any text left un-submitted in the box when Save is clicked
+            const leftover = tagsInputValue.split(",").map(t => t.trim()).filter(Boolean);
+            const finalTags = [...tagsDraft];
+            leftover.forEach(t => {
+                if (!finalTags.some(x => x.toLowerCase() === t.toLowerCase())) finalTags.push(t);
+            });
+
+            setRows(prev => prev.map(r =>
+                r.id === tagsModalRowId ? { ...r, tags: finalTags.join(", ") } : r
+            ));
+            setTagsModalOpen(false);
+        }
+
+        function closeTagsModal() {
+            setTagsModalOpen(false);
         }
 
         return (
@@ -517,6 +587,141 @@ import { useState, useEffect } from "react";
                         box-shadow: 0 0 0 3px var(--press-tint);
                     }
 
+                    .bimd-tags-btn {
+                    padding: 7px 12px;
+                    border: 1px solid var(--rule-strong);
+                    border-radius: 4px;
+                    background: var(--panel);
+                    color: var(--press);
+                    font-size: 12.5px;
+                    font-weight: 500;
+                    font-family: inherit;
+                    cursor: pointer;
+                    white-space: nowrap;
+                    transition: background 140ms ease, border-color 140ms ease;
+                      }
+.bimd-tags-btn:hover { background: var(--press-tint); border-color: var(--press); }
+.bimd-tags-btn:focus-visible { outline: 2px solid var(--press); outline-offset: 2px; }
+
+.bimd-tag-chips-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+    max-width: 200px;
+}
+.bimd-tag-chip-mini {
+    font-size: 11px;
+    padding: 2px 7px;
+    background: var(--press-tint);
+    color: var(--press-ink);
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.bimd-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(28, 27, 23, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+.bimd-modal {
+    background: var(--panel);
+    border-radius: 8px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    animation: bimd-rise 200ms ease-out;
+}
+.bimd-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--rule);
+}
+.bimd-modal-title {
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0;
+    color: var(--ink);
+}
+.bimd-modal-close {
+    border: none;
+    background: none;
+    font-size: 20px;
+    line-height: 1;
+    color: var(--graphite);
+    cursor: pointer;
+    padding: 4px;
+}
+.bimd-modal-close:hover { color: var(--wire-red); }
+.bimd-modal-body { padding: 18px 20px; }
+.bimd-modal-label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+}
+.bimd-tags-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--ink);
+    font-size: 13.5px;
+    font-family: inherit;
+    resize: vertical;
+}
+.bimd-tags-textarea:focus-visible {
+    outline: none;
+    border-color: var(--press);
+    box-shadow: 0 0 0 3px var(--press-tint);
+}
+.bimd-tag-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+.bimd-tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px 6px 12px;
+    background: var(--press-tint);
+    color: var(--press-ink);
+    border-radius: 4px;
+    font-size: 13px;
+}
+.bimd-tag-chip-remove {
+    border: none;
+    background: none;
+    color: var(--press);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    border-radius: 3px;
+}
+.bimd-tag-chip-remove:hover { color: #fff; background: var(--wire-red); }
+.bimd-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--rule);
+}
+
                     .bimd-link-btn {
                         border: none;
                         background: none;
@@ -669,6 +874,8 @@ import { useState, useEffect } from "react";
                                             <th className="bimd-col-num">#</th>
                                             <th>File</th>
                                             <th>Category</th>
+                                            <th>Slug</th>
+                                            <th>Tags</th>
                                             <th>Scheduled at</th>
                                             <th>Image</th>
                                             <th></th>
@@ -702,6 +909,31 @@ import { useState, useEffect } from "react";
                                                                 ? <span className="bimd-hint-arrow"> → {resolveCategoryName(r.detectedCategory)}</span>
                                                                 : ""}
                                                         </span>
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    <div style={{ display: "flex", alignItems: "center", border: "1px solid var(--rule-strong)", borderRadius: 4, overflow: "hidden" }}>
+                                                        
+                                                        <input
+                                                            type="text"
+                                                            className="bimd-input"
+                                                            style={{ border: "none", borderRadius: 0 }}
+                                                            value={r.slug}
+                                                            placeholder="auto"
+                                                            onChange={(e) => updateRowSlug(r.id, e.target.value)}
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <button className="bimd-tags-btn" onClick={() => openTagsModal(r)}>
+                                                        {r.tags ? `Edit tags` : "Add tags"}
+                                                    </button>
+                                                    {r.tags && (
+                                                        <div className="bimd-tag-chips-preview">
+                                                            {r.tags.split(",").map(t => t.trim()).filter(Boolean).map((t, i) => (
+                                                                <span key={i} className="bimd-tag-chip-mini">{t}</span>
+                                                            ))}
+                                                        </div>
                                                     )}
                                                 </td>
                                                 <td>
@@ -785,6 +1017,60 @@ import { useState, useEffect } from "react";
                             ))}
                         </section>
                     )}
+
+                    {tagsModalOpen && (
+                        <div className="bimd-modal-overlay" onClick={closeTagsModal}>
+                            <div className="bimd-modal" onClick={(e) => e.stopPropagation()}>
+                                <div className="bimd-modal-header">
+                                    <h3 className="bimd-modal-title">Add tags</h3>
+                                    <button className="bimd-modal-close" onClick={closeTagsModal} aria-label="Close">×</button>
+                                </div>
+
+                                <div className="bimd-modal-body">
+                                    <label htmlFor="bimd-tags-input" className="bimd-modal-label">
+                                        Type a tag, then press Enter or comma to add it
+                                    </label>
+                                    <textarea
+                                        id="bimd-tags-input"
+                                        className="bimd-tags-textarea"
+                                        rows={3}
+                                        autoFocus
+                                        value={tagsInputValue}
+                                        onChange={(e) => setTagsInputValue(e.target.value)}
+                                        onKeyDown={handleTagsInputKeyDown}
+                                        placeholder="e.g. politics, india, election"
+                                    />
+
+                                    {tagsDraft.length > 0 && (
+                                        <div className="bimd-tag-chip-list">
+                                            {tagsDraft.map((tag, i) => (
+                                                <span key={i} className="bimd-tag-chip">
+                                                    {tag}
+                                                    <button
+                                                        type="button"
+                                                        className="bimd-tag-chip-remove"
+                                                        onClick={() => removeDraftTag(tag)}
+                                                        aria-label={`Remove tag ${tag}`}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="bimd-modal-footer">
+                                    <button className="bimd-link-btn" onClick={closeTagsModal}>Cancel</button>
+                                    <button className="bimd-submit" onClick={saveTagsModal}>
+                                        Save{tagsDraft.length > 0 ? ` (${tagsDraft.length})` : ""}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+
 
                     <TodayImports />
                 </div>
