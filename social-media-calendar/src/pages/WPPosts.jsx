@@ -13,6 +13,9 @@ import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Cancel";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { authFetch } from '../lib/auth';
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import StopIcon from "@mui/icons-material/Stop";
+import EventIcon from "@mui/icons-material/Event";
 
 
 const API_URL = "https://prod.panditjee.com/api/wp-posts";
@@ -52,6 +55,14 @@ export default function WPPostsTest() {
     const [selectedIds, setSelectedIds] = useState([]);
     const [bulkDeleting, setBulkDeleting] = useState(false);
     const [bulkDeleteResults, setBulkDeleteResults] = useState({}); // { [id]: 'pending' | 'success' | 'error' }
+    const [triggeringId, setTriggeringId] = useState(null);
+    const [haltingId, setHaltingId] = useState(null);
+
+    const [rescheduleOpen, setRescheduleOpen] = useState(false);
+    const [reschedulePost, setReschedulePost] = useState(null);
+    const [rescheduleDate, setRescheduleDate] = useState("");
+    const [rescheduleSaving, setRescheduleSaving] = useState(false);
+    const [rescheduleError, setRescheduleError] = useState(null);
 
     useEffect(() => {
         authFetch(API_URL)
@@ -84,6 +95,75 @@ export default function WPPostsTest() {
             setTranslationsLoading(false);
         }
     }
+
+    async function triggerPipeline(post) {
+    const isRepublish = post.status === "published";
+
+    const confirmMsg = isRepublish
+        ? "This post is already published. Running the pipeline again will create NEW duplicate posts on each WordPress site — it will NOT update the existing translations. Continue?"
+        : "Run the AI pipeline for this post now? It will be translated, tagged, and published within a few seconds.";
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setTriggeringId(post.id);
+    try {
+        const res = await authFetch(`${API_URL}/trigger/${post.id}`, { method: "PUT" });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            alert(`Failed to trigger: ${data.error || "unknown error"}`);
+            return;
+        }
+
+        setPosts(prev =>
+            prev.map(p =>
+                p.id === post.id
+                    ? { ...p, status: "scheduled", scheduled_at: new Date().toISOString(), error_message: null }
+                    : p
+            )
+        );
+    } catch (err) {
+        alert("Network error. Please try again.");
+    } finally {
+        setTriggeringId(null);
+    }
+    } 
+
+    async function haltPipeline(post) {
+    const isProcessing = post.status === "processing";
+    const confirmMsg = isProcessing
+        ? "This pipeline is currently running. It will stop after the current site finishes publishing (already-published sites won't be undone). Continue?"
+        : "Cancel this queued pipeline run before it starts?";
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setHaltingId(post.id);
+    try {
+        const res = await authFetch(`${API_URL}/halt/${post.id}`, { method: "PUT" });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            alert(`Failed to halt: ${data.error || "unknown error"}`);
+            return;
+        }
+
+        // Only the "not yet claimed" case resolves instantly; reflect that locally.
+        if (!isProcessing) {
+            setPosts(prev =>
+                prev.map(p =>
+                    p.id === post.id
+                        ? { ...p, status: "failed", error_message: "Cancelled by user before starting" }
+                        : p
+                )
+            );
+        }
+        alert(data.message);
+    } catch (err) {
+        alert("Network error. Please try again.");
+    } finally {
+        setHaltingId(null);
+    }
+}
 
 
     async function applyTagsAndSlugToAll() {
@@ -118,6 +198,68 @@ export default function WPPostsTest() {
         setSaveError("Network error. Please try again.");
     } finally {
         setApplyingAll(false);
+    }
+}
+
+ function toDatetimeLocalValue(dateStr) {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    const pad = n => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function openReschedule(post) {
+    setReschedulePost(post);
+    setRescheduleDate(toDatetimeLocalValue(post.scheduled_at));
+    setRescheduleError(null);
+    setRescheduleOpen(true);
+}
+
+async function submitReschedule() {
+    if (!rescheduleDate) {
+        setRescheduleError("Pick a date and time.");
+        return;
+    }
+
+    const selected = new Date(rescheduleDate);
+
+    if (selected.getTime() < Date.now() - 60_000) {
+        if (!window.confirm("That time is in the past — the worker will pick this up on its next poll (within ~5s). Continue?")) return;
+    }
+
+    if (reschedulePost.status === "published") {
+        if (!window.confirm("This post is already published. Rescheduling it will create NEW duplicate posts on each WordPress site — it will NOT update the existing translations. Continue?")) return;
+    }
+
+    setRescheduleSaving(true);
+    setRescheduleError(null);
+    try {
+        const res = await authFetch(`${API_URL}/reschedule/${reschedulePost.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                scheduled_at: selected.toISOString().slice(0, 19).replace("T", " "),
+            }),
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            setRescheduleError(data.error || "Failed to reschedule.");
+            return;
+        }
+
+        setPosts(prev =>
+            prev.map(p =>
+                p.id === reschedulePost.id
+                    ? { ...p, scheduled_at: selected.toISOString(), status: "scheduled", error_message: null }
+                    : p
+            )
+        );
+        setRescheduleOpen(false);
+    } catch (err) {
+        setRescheduleError("Network error. Please try again.");
+    } finally {
+        setRescheduleSaving(false);
     }
 }
 
@@ -365,11 +507,12 @@ export default function WPPostsTest() {
                     <TableHead>
                         <TableRow>
                             <TableCell><b>Title</b></TableCell>
-                            <TableCell><b>Client ID</b></TableCell>
+                            <TableCell><b>Client</b></TableCell>
                             <TableCell><b>Status</b></TableCell>
                             <TableCell><b>Category</b></TableCell>
                             <TableCell><b>Scheduled At</b></TableCell>
                             <TableCell><b>Created At</b></TableCell>
+                            <TableCell><b>Reschedule at</b></TableCell>
                             <TableCell><b>Actions</b></TableCell>
                         </TableRow>
                     </TableHead>
@@ -379,11 +522,27 @@ export default function WPPostsTest() {
                                 <TableCell sx={{ maxWidth: 280 }}>
                                     <span className="block truncate">{post.title}</span>
                                 </TableCell>
-                                <TableCell>{post.client_id}</TableCell>
+                                <TableCell>{post.client_name || `#${post.client_id}`}</TableCell>
                                 <TableCell><StatusBadge status={post.status} /></TableCell>
                                 <TableCell>{post.master_category_name || "-"}</TableCell>
                                 <TableCell>{formatDate(post.scheduled_at)}</TableCell>
                                 <TableCell>{formatDate(post.created_at)}</TableCell>
+                                <TableCell>
+                                    <div className="flex gap-2 items-center">
+                                        <Tooltip title={post.status === "processing" ? "Halt the running pipeline first" : "Reschedule this post"}>
+                                            <span>
+                                                <button
+                                                    onClick={() => openReschedule(post)}
+                                                    disabled={post.status === "processing"}
+                                                    className="flex items-center gap-1 text-blue-600 text-sm hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <EventIcon fontSize="small" />
+                                                    Reschedule
+                                                </button>
+                                            </span>
+                                        </Tooltip>
+                                    </div>
+                                </TableCell>
                                 <TableCell>
                                     <div className="flex gap-2 items-center">
                                         <Tooltip title="View all translated posts">
@@ -392,7 +551,7 @@ export default function WPPostsTest() {
                                                 className="flex items-center gap-1 text-purple-600 text-sm hover:underline"
                                             >
                                                 <TranslateIcon fontSize="small" />
-                                                Translations
+                                               
                                             </button>
                                         </Tooltip>
                                         <Tooltip title="Delete translated articles">
@@ -401,9 +560,36 @@ export default function WPPostsTest() {
                                                 className="flex items-center gap-1 text-red-600 text-sm hover:underline"
                                             >
                                                 <DeleteIcon fontSize="small" />
-                                                Delete
+
                                             </button>
                                         </Tooltip>
+                                        <Tooltip title={post.status === "processing" ? "Already processing" : "Run AI pipeline now"}>
+                                            <span>
+                                                <button
+                                                    onClick={() => triggerPipeline(post)}
+                                                    disabled={triggeringId === post.id || post.status === "processing"}
+                                                    className="flex items-center gap-1 text-green-600 text-sm hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <PlayArrowIcon fontSize="small" />
+                                                    {triggeringId === post.id ? "Queuing..." : ""}
+                                                </button>
+                                            </span>
+                                        </Tooltip>
+                                        {(post.status === "scheduled" || post.status === "processing") && (
+                                            <Tooltip title={post.status === "processing" ? "Stop after current site" : "Cancel before it starts"}>
+                                                <span>
+                                                    <button
+                                                        onClick={() => haltPipeline(post)}
+                                                        disabled={haltingId === post.id}
+                                                        className="flex items-center gap-1 text-orange-600 text-sm hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        <StopIcon fontSize="small" />
+                                                        {haltingId === post.id ? "Halting..." : ""}
+                                                    </button>
+                                                </span>
+                                            </Tooltip>
+                                        )}
+                                       
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -927,6 +1113,60 @@ export default function WPPostsTest() {
                             </Button>
                         </>
                     )}
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={rescheduleOpen} onClose={() => { if (!rescheduleSaving) setRescheduleOpen(false); }} maxWidth="xs" fullWidth>
+                <DialogTitle>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <EventIcon className="text-blue-600" />
+                                <span className="font-semibold">Reschedule post</span>
+                            </div>
+                            <p className="text-sm text-gray-500 mt-1 font-normal truncate max-w-xs">
+                                {reschedulePost?.title}
+                            </p>
+                        </div>
+                        <IconButton onClick={() => setRescheduleOpen(false)} size="small" disabled={rescheduleSaving}>
+                            <CloseIcon />
+                        </IconButton>
+                    </div>
+                </DialogTitle>
+
+                <DialogContent dividers>
+                    {rescheduleError && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 rounded px-4 py-2 text-sm mb-3">
+                            ❌ {rescheduleError}
+                        </div>
+                    )}
+
+                    <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">
+                        New date &amp; time
+                    </label>
+                    <input
+                        type="datetime-local"
+                        value={rescheduleDate}
+                        onChange={e => setRescheduleDate(e.target.value)}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-xs text-gray-400 mt-2">
+                        Uses your browser's local timezone. The pipeline runs once this time has passed.
+                    </p>
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button onClick={() => setRescheduleOpen(false)} color="inherit" disabled={rescheduleSaving}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={submitReschedule}
+                        variant="contained"
+                        disabled={rescheduleSaving}
+                        startIcon={rescheduleSaving ? <CircularProgress size={16} /> : null}
+                    >
+                        {rescheduleSaving ? "Saving..." : "Save"}
+                    </Button>
                 </DialogActions>
             </Dialog>
         </div>
