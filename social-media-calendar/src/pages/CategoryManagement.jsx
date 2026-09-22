@@ -16,48 +16,54 @@ export default function CategoryManagement() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [id]);
 
   async function loadData() {
-    setLoading(true);
+  setLoading(true);
 
-    const [siteRes, masterRes, siteCatRes, mappingRes] =
-      await Promise.all([
-        authFetch(`${BASE_URL}/api/wordpress-sites/${id}`),
-        authFetch(`${BASE_URL}/api/master-categories`),
-        authFetch(`${BASE_URL}/api/wordpress-sites/${id}/categories`),
-        authFetch(`${BASE_URL}/api/site-category-mapping/${id}`)
-      ]);
+  const siteRes = await authFetch(`${BASE_URL}/api/wordpress-sites/${id}`);
+  const site = await siteRes.json();
 
-    const site = await siteRes.json();
-    const masters = await masterRes.json();
-    const siteCats = await siteCatRes.json();
-    const mappings = await mappingRes.json();
+  // console.log("id: ",id);
 
-    const mappingObj = {};
-    mappings.forEach(m => {
-      mappingObj[m.master_category_id] = m.wp_category_id;
-    });
+  const [masterRes, siteCatRes, mappingRes] = await Promise.all([
+    authFetch(`${BASE_URL}/api/master-categories?clientId=${site.client_id}`),
+    authFetch(`${BASE_URL}/api/wordpress-sites/${id}/categories`),
+    authFetch(`${BASE_URL}/api/site-category-mapping/${id}`)
+  ]);
 
-    setSiteInfo(site);
-    setMasterCategories(masters);
-    setSiteCategories(siteCats);
-    setMapping(mappingObj);
-    setLoading(false);
-  }
+  const masters = await masterRes.json();
+  const siteCats = await siteCatRes.json();
+  const mappings = await mappingRes.json();
 
-  async function addMasterCategory() {
-    if (!newMasterName.trim()) return;
+  const mappingObj = {};
+  mappings.forEach(m => {
+    mappingObj[m.master_category_id] = m.wp_category_id;
+  });
 
-    await authFetch(`${BASE_URL}/api/master-categories`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newMasterName })
-    });
+  setSiteInfo(site);
+  setMasterCategories(masters);
+  setSiteCategories(siteCats);
+  setMapping(mappingObj);
+  setLoading(false);
 
-    setNewMasterName("");
-    loadData();
-  }
+  // console.log(site)
+
+  // console.log(siteInfo);
+}
+
+async function addMasterCategory() {
+  if (!newMasterName.trim() || !siteInfo?.client_id) return;
+
+  await authFetch(`${BASE_URL}/api/master-categories`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: newMasterName, clientId: siteInfo.client_id })
+  });
+
+  setNewMasterName("");
+  loadData();
+}
 
   async function saveMapping() {
     const payload = Object.entries(mapping).map(

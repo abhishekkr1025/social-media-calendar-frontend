@@ -147,6 +147,7 @@ export default function BulkImportMd() {
     const [tagsModalRowId, setTagsModalRowId] = useState(null);
     const [tagsDraft, setTagsDraft] = useState([]);       // chips already added, in the modal
     const [tagsInputValue, setTagsInputValue] = useState(""); // text currently being typed
+    const [loadingCategories, setLoadingCategories] = useState(false);
 
     useEffect(() => {
         loadOptions();
@@ -173,16 +174,41 @@ export default function BulkImportMd() {
         }));
     }, [categories]);
 
+    useEffect(() => {
+        setRows(prev => prev.map(r => ({ ...r, masterCategoryId: "" })));
+    }, [clientId]);
+
+    useEffect(() => {
+        if (!clientId) {
+            setCategories([]);
+            return;
+        }
+
+        let cancelled = false;
+
+        async function loadCategories() {
+            setLoadingCategories(true);
+            try {
+                const res = await authFetch(`${API_BASE}/api/master-categories?clientId=${clientId}`);
+                const data = await res.json();
+                if (!cancelled) setCategories(data);
+            } catch (err) {
+                if (!cancelled) toast.error("Failed to load categories for this client");
+            } finally {
+                if (!cancelled) setLoadingCategories(false);
+            }
+        }
+
+        loadCategories();
+        return () => { cancelled = true; };
+    }, [clientId]);
+
     async function loadOptions() {
         setLoadingOptions(true);
         try {
-            const [clientsRes, categoriesRes] = await Promise.all([
-                authFetch(`${API_BASE}/api/clients`),
-                authFetch(`${API_BASE}/api/master-categories`)
-            ]);
+            const clientsRes = await authFetch(`${API_BASE}/api/clients`);
             const clientsData = await clientsRes.json();
             setClients(clientsData);
-            setCategories(await categoriesRes.json());
 
             const defaultClient = clientsData.find(
                 c => c.email && c.email.toLowerCase() === DEFAULT_CLIENT_EMAIL.toLowerCase()
@@ -191,7 +217,7 @@ export default function BulkImportMd() {
                 setClientId(String(defaultClient.id));
             }
         } catch (err) {
-            toast.error("Failed to load clients/categories");
+            toast.error("Failed to load clients");
         } finally {
             setLoadingOptions(false);
         }
@@ -344,8 +370,8 @@ export default function BulkImportMd() {
             const fileMeta = orderedRows.map(r => ({
                 master_category_id: r.masterCategoryId || null,
                 scheduled_at: r.scheduledAt || null,
-                slug: r.slug || null,     
-                tags: r.tags || null 
+                slug: r.slug || null,
+                tags: r.tags || null
             }));
             formData.append("fileMeta", JSON.stringify(fileMeta));
 
@@ -960,9 +986,9 @@ export default function BulkImportMd() {
                                                     className="bimd-select"
                                                     value={r.masterCategoryId}
                                                     onChange={(e) => updateRowCategory(r.id, e.target.value)}
-                                                    disabled={loadingOptions}
+                                                    disabled={loadingCategories}
                                                 >
-                                                    <option value="">No category</option>
+                                                    <option value="">{loadingCategories ? "Loading…" : "No category"}</option>
                                                     {categories.map((c) => (
                                                         <option key={c.id} value={c.id}>
                                                             {c.name}
@@ -980,7 +1006,7 @@ export default function BulkImportMd() {
                                             </td>
                                             <td>
                                                 <div style={{ display: "flex", alignItems: "center", border: "1px solid var(--rule-strong)", borderRadius: 4, overflow: "hidden" }}>
-                                                    
+
                                                     <input
                                                         type="text"
                                                         className="bimd-input"
