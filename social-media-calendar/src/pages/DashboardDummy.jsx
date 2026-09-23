@@ -28,7 +28,7 @@ import { authFetch } from '../lib/auth';
 
 // ── NEW: Panditjee icon ─────────────────────────────────────
 const PanditjeeIcon = () => (
-  <span style={{ fontWeight: 700, fontSize: 14 }}>P</span>
+    <span style={{ fontWeight: 700, fontSize: 14 }}>P</span>
 );
 
 function DashboardDummy() {
@@ -172,66 +172,90 @@ function DashboardDummy() {
         setPosts(formatted);
     }, [clients, rawPosts]);
 
+    // useEffect(() => {
+    //     authFetch(`${BASE_URL}/api/master-categories`)
+    //         .then(res => res.json())
+    //         .then(setMasterCategories);
+    // }, []);
+
     useEffect(() => {
-        authFetch(`${BASE_URL}/api/master-categories`)
+        if (!selectedClient?.id) {
+            setMasterCategories([]);
+            return;
+        }
+
+        let cancelled = false;
+
+        authFetch(`${BASE_URL}/api/master-categories?clientId=${selectedClient.id}`)
             .then(res => res.json())
-            .then(setMasterCategories);
-    }, []);
+            .then(data => {
+                if (!cancelled) setMasterCategories(Array.isArray(data) ? data : []);
+            })
+            .catch(() => {
+                if (!cancelled) setMasterCategories([]);
+            });
+
+        return () => { cancelled = true; };
+    }, [selectedClient]);
+
+    useEffect(() => {
+        setWpPost(prev => ({ ...prev, master_category_id: "" }));
+    }, [selectedClient]);
 
     // ── NEW: Schedule a Panditjee post ───────────────────────
     const schedulePanditjeePost = async () => {
-    if (!selectedClient) {
-        showWarning("Please select a client");
-        return;
-    }
+        if (!selectedClient) {
+            showWarning("Please select a client");
+            return;
+        }
 
-    if (!panditjeePost.content) {
-        showWarning("Caption is required");
-        return;
-    }
+        if (!panditjeePost.content) {
+            showWarning("Caption is required");
+            return;
+        }
 
-    if (!panditjeePost.date || !panditjeePost.time) {
-        showWarning("Please select date and time");
-        return;
-    }
+        if (!panditjeePost.date || !panditjeePost.time) {
+            showWarning("Please select date and time");
+            return;
+        }
 
-    const scheduled_at = `${panditjeePost.date} ${panditjeePost.time}:00`;
+        const scheduled_at = `${panditjeePost.date} ${panditjeePost.time}:00`;
 
-    const formData = new FormData();
-    formData.append("clientId", selectedClient.id);
+        const formData = new FormData();
+        formData.append("clientId", selectedClient.id);
 
-    // ✅ IMPORTANT: use caption only
-    formData.append("caption", panditjeePost.content);
+        // ✅ IMPORTANT: use caption only
+        formData.append("caption", panditjeePost.content);
 
-    formData.append("scheduled_at", scheduled_at);
-    formData.append("platform", "panditjee"); // 👈 important for worker
+        formData.append("scheduled_at", scheduled_at);
+        formData.append("platform", "panditjee"); // 👈 important for worker
 
-    if (panditjeePost.image) {
-        formData.append("file", panditjeePost.image);
-    }
+        if (panditjeePost.image) {
+            formData.append("file", panditjeePost.image);
+        }
 
-    const res = await authFetch(`${BASE_URL}/api/panditjee/post`, {
-        method: "POST",
-        body: formData
-    });
+        const res = await authFetch(`${BASE_URL}/api/panditjee/post`, {
+            method: "POST",
+            body: formData
+        });
 
-    if (!res.ok) {
-        showError("Failed to schedule Panditjee post");
-        return;
-    }
+        if (!res.ok) {
+            showError("Failed to schedule Panditjee post");
+            return;
+        }
 
-    showSuccess("Panditjee post scheduled!");
-    setPanditjeePost({
-        title: "",
-        content: "",
-        date: "",
-        time: "",
-        category: "",
-        image: null
-    });
+        showSuccess("Panditjee post scheduled!");
+        setPanditjeePost({
+            title: "",
+            content: "",
+            date: "",
+            time: "",
+            category: "",
+            image: null
+        });
 
-    closeScheduler();
-};
+        closeScheduler();
+    };
 
     const scheduleWordPressPost = async () => {
         if (!selectedClient) { showWarning("Please select a client"); return; }
@@ -315,7 +339,7 @@ function DashboardDummy() {
         twitter: 'bg-sky-500',
         linkedin: 'bg-blue-700',
         youtube: 'bg-red-500',
-        "youtube-community": 'bg-red-700', 
+        "youtube-community": 'bg-red-700',
         wordpress: 'bg-blue-500',
         telegram: 'bg-sky-500',
         panditjee: 'bg-orange-500',     // ← NEW
@@ -506,7 +530,7 @@ function DashboardDummy() {
                                                 Schedule{" "}
                                                 {schedulerType === "social" ? "Social Post"
                                                     : schedulerType === "blog" ? "Blog Post"
-                                                    : "Panditjee Post"} — {selectedDate}
+                                                        : "Panditjee Post"} — {selectedDate}
                                             </CardTitle>
                                         </CardHeader>
 
@@ -579,7 +603,7 @@ function DashboardDummy() {
                                                                     onClick={() => togglePlatform(platform)}
                                                                 >
                                                                     {platformIcons[platform]}{" "}
-                                                                    {platform === "youtube-community" ? "YT Community" : platform}  
+                                                                    {platform === "youtube-community" ? "YT Community" : platform}
                                                                 </Button>
                                                             ))}
                                                     </div>
@@ -607,8 +631,11 @@ function DashboardDummy() {
                                                             className="w-full border rounded-md px-3 py-2 text-sm"
                                                             value={wpPost.master_category_id}
                                                             onChange={(e) => setWpPost({ ...wpPost, master_category_id: e.target.value })}
+                                                            disabled={!selectedClient}
                                                         >
-                                                            <option value="">Select Category</option>
+                                                            <option value="">
+                                                                {!selectedClient ? "Select a client first" : "Select Category"}
+                                                            </option>
                                                             {masterCategories.map(cat => (
                                                                 <option key={cat.id} value={cat.id}>{cat.name}</option>
                                                             ))}
@@ -755,8 +782,8 @@ function DashboardDummy() {
                                                     schedulerType === "social"
                                                         ? newPost.time
                                                         : schedulerType === "blog"
-                                                        ? wpPost.time
-                                                        : panditjeePost.time
+                                                            ? wpPost.time
+                                                            : panditjeePost.time
                                                 }
                                                 onChange={(e) => {
                                                     if (schedulerType === "social") setNewPost({ ...newPost, time: e.target.value });
@@ -778,7 +805,7 @@ function DashboardDummy() {
                                                     Schedule{" "}
                                                     {schedulerType === "social" ? "Post"
                                                         : schedulerType === "blog" ? "Blog"
-                                                        : "on Panditjee"}
+                                                            : "on Panditjee"}
                                                 </Button>
                                                 <Button variant="outline" onClick={closeScheduler}>Cancel</Button>
                                             </div>
