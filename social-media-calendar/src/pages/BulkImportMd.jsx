@@ -134,6 +134,27 @@ function findCategoryId(categoryName, categories) {
     return partial ? String(partial.id) : "";
 }
 
+
+/**
+    Matches a frontmatter `author:` value (a slug or a display name) against the
+    loaded WordPress author list. Returns the author's slug, or "" if no match.
+*/
+function findAuthorSlug(rawAuthor, authors) {
+    if (!rawAuthor || authors.length === 0) return "";
+    const raw = String(Array.isArray(rawAuthor) ? rawAuthor[0] : rawAuthor).trim().toLowerCase();
+    if (!raw) return "";
+
+    const bySlug = authors.find(a => a.slug.toLowerCase() === raw);
+    if (bySlug) return bySlug.slug;
+
+    const byName = authors.find(a => a.name.trim().toLowerCase() === raw);
+    if (byName) return byName.slug;
+
+    const rawAsSlug = normalizeSlug(raw);
+    const loose = authors.find(a => normalizeSlug(a.name) === rawAsSlug);
+    return loose ? loose.slug : "";
+}
+
 export default function BulkImportMd() {
     const [rows, setRows] = useState([]);
     const [clients, setClients] = useState([]);
@@ -148,6 +169,8 @@ export default function BulkImportMd() {
     const [tagsDraft, setTagsDraft] = useState([]);       // chips already added, in the modal
     const [tagsInputValue, setTagsInputValue] = useState(""); // text currently being typed
     const [loadingCategories, setLoadingCategories] = useState(false);
+    const [authors, setAuthors] = useState([]);
+    const [loadingAuthors, setLoadingAuthors] = useState(false);
 
     useEffect(() => {
         loadOptions();
@@ -191,9 +214,21 @@ export default function BulkImportMd() {
             try {
                 const res = await authFetch(`${API_BASE}/api/master-categories?clientId=${clientId}`);
                 const data = await res.json();
-                if (!cancelled) setCategories(data);
+
+                // Defensive: the endpoint should always return an array, but if a
+                // failure response ever slips through as JSON (an error object,
+                // null, etc.) we must not let a non-array reach `categories` —
+                // that's what caused `categories.find is not a function` downstream
+                // in findCategoryId.
+                if (!res.ok) {
+                    throw new Error(data?.error || `Request failed (${res.status})`);
+                }
+                if (!cancelled) setCategories(Array.isArray(data) ? data : []);
             } catch (err) {
-                if (!cancelled) toast.error("Failed to load categories for this client");
+                if (!cancelled) {
+                    setCategories([]);
+                    toast.error("Failed to load categories for this client");
+                }
             } finally {
                 if (!cancelled) setLoadingCategories(false);
             }
@@ -203,16 +238,60 @@ export default function BulkImportMd() {
         return () => { cancelled = true; };
     }, [clientId]);
 
+    // Fill in auto-detected authors once the author list arrives
+useEffect(() => {
+    if (authors.length === 0) return;
+    setRows(prev => prev.map(r => {
+        if (r.authorUsername || !r.detectedAuthor) return r;
+        const slug = findAuthorSlug(r.detectedAuthor, authors);
+        return slug ? { ...r, authorUsername: slug } : r;
+    }));
+}, [authors]);
+
+// Authors belong to a client's WP sites, so reset selections when the client changes
+useEffect(() => {
+    setRows(prev => prev.map(r => ({ ...r, authorUsername: "" })));
+}, [clientId]);
+
+useEffect(() => {
+    if (!clientId) {
+        setAuthors([]);
+        return;
+    }
+
+    let cancelled = false;
+
+    async function loadAuthors() {
+        setLoadingAuthors(true);
+        try {
+            const res = await authFetch(`${API_BASE}/api/bulk-import-md/wp-authors?clientId=${clientId}`);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.error || `Request failed (${res.status})`);
+            if (!cancelled) setAuthors(Array.isArray(data) ? data : []);
+        } catch (err) {
+            if (!cancelled) {
+                setAuthors([]);
+                toast.error("Failed to load authors for this client");
+            }
+        } finally {
+            if (!cancelled) setLoadingAuthors(false);
+        }
+    }
+
+    loadAuthors();
+    return () => { cancelled = true; };
+}, [clientId]);
+
     async function loadOptions() {
         setLoadingOptions(true);
         try {
             const clientsRes = await authFetch(`${API_BASE}/api/clients`);
             const clientsData = await clientsRes.json();
-            setClients(clientsData);
+            setClients(Array.isArray(clientsData) ? clientsData : []);
 
-            const defaultClient = clientsData.find(
-                c => c.email && c.email.toLowerCase() === DEFAULT_CLIENT_EMAIL.toLowerCase()
-            );
+            const defaultClient = Array.isArray(clientsData)
+                ? clientsData.find(c => c.email && c.email.toLowerCase() === DEFAULT_CLIENT_EMAIL.toLowerCase())
+                : null;
             if (defaultClient) {
                 setClientId(String(defaultClient.id));
             }
@@ -239,10 +318,12 @@ export default function BulkImportMd() {
         // Reset the input immediately so selecting the same file again later still fires onChange
         e.target.value = "";
 
+
         const newRows = await Promise.all(mdFiles.map(async (file) => {
             let detectedCategory = null;
             let detectedSlug = "";
             let detectedTags = "";
+            let detectedAuthor = null;
 
             try {
                 const text = await file.text();
@@ -258,6 +339,10 @@ export default function BulkImportMd() {
                     const tagList = Array.isArray(fm.tags) ? fm.tags : [fm.tags];
                     detectedTags = tagList.map(t => t.trim()).filter(Boolean).join(", ");
                 }
+
+                if (fm.author) {
+                    detectedAuthor = Array.isArray(fm.author) ? fm.author[0] : fm.author;
+                }
             } catch (err) {
                 // if we can't read the file for some reason, just leave everything unset —
                 // it's still selectable/editable manually in the row
@@ -270,6 +355,8 @@ export default function BulkImportMd() {
                 scheduledAt: "",
                 slug: detectedSlug,
                 tags: detectedTags,
+                authorUsername: findAuthorSlug(detectedAuthor, authors),
+                detectedAuthor,   
                 detectedCategory,
                 image: null,
                 imagePreviewUrl: null
@@ -305,6 +392,10 @@ export default function BulkImportMd() {
     function updateRowTags(id, value) {
         setRows(prev => prev.map(r => (r.id === id ? { ...r, tags: value } : r)));
     }
+
+    function updateRowAuthor(id, value) {
+    setRows(prev => prev.map(r => (r.id === id ? { ...r, authorUsername: value } : r)));
+}
 
     function updateRowImage(id, file) {
         if (!file) return;
@@ -371,7 +462,8 @@ export default function BulkImportMd() {
                 master_category_id: r.masterCategoryId || null,
                 scheduled_at: r.scheduledAt || null,
                 slug: r.slug || null,
-                tags: r.tags || null
+                tags: r.tags || null,
+                author_username: r.authorUsername || null
             }));
             formData.append("fileMeta", JSON.stringify(fileMeta));
 
@@ -458,6 +550,8 @@ export default function BulkImportMd() {
     function closeTagsModal() {
         setTagsModalOpen(false);
     }
+
+    const defaultAuthor = authors.find(a => a.isDefault) || null;
 
     return (
         <div className="bimd-page">
@@ -968,6 +1062,7 @@ export default function BulkImportMd() {
                                         <th>File</th>
                                         <th>Category</th>
                                         <th>Slug</th>
+                                        <th>Author</th>
                                         <th>Tags</th>
                                         <th>Scheduled at</th>
                                         <th>Image</th>
@@ -1016,6 +1111,31 @@ export default function BulkImportMd() {
                                                         onChange={(e) => updateRowSlug(r.id, e.target.value)}
                                                     />
                                                 </div>
+                                            </td>
+                                            <td>
+                                                <select
+                                                    className="bimd-select"
+                                                    value={r.authorUsername}
+                                                    onChange={(e) => updateRowAuthor(r.id, e.target.value)}
+                                                    disabled={loadingAuthors}
+                                                >
+                                                    <option value="">
+                                                        {loadingAuthors
+                                                            ? "Loading…"
+                                                            : defaultAuthor
+                                                                ? `${defaultAuthor.username} (default)`
+                                                                : "Default author"}
+                                                    </option>
+                                                    {authors.map((a) => (
+                                                        <option key={a.id} value={a.slug}>{a.name}</option>
+                                                    ))}
+                                                </select>
+                                                {r.detectedAuthor && (
+                                                    <span className="bimd-hint">
+                                                        Detected: {r.detectedAuthor}
+                                                        {!r.authorUsername && !loadingAuthors ? " (no match)" : ""}
+                                                    </span>
+                                                )}
                                             </td>
                                             <td>
                                                 <button className="bimd-tags-btn" onClick={() => openTagsModal(r)}>
@@ -1096,6 +1216,9 @@ export default function BulkImportMd() {
                                         <>
                                             <p className="bimd-result-line"><strong>Title:</strong> {r.title}</p>
                                             <p className="bimd-result-line"><strong>Post ID:</strong> {r.postId}</p>
+                                            {r.author_username && (
+                                                <p className="bimd-result-line"><strong>Author:</strong> {r.author_username}</p>
+                                            )}
                                             <p className="bimd-result-line">
                                                 <strong>Scheduled for:</strong> {new Date(r.scheduledAt).toLocaleString()}
                                             </p>
